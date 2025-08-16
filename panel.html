@@ -668,6 +668,383 @@
         transform: translateX(-50%) translateY(-4px);
       }
       
+      /* 主页签样式 */
+      .main-tabs {
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        background: var(--bg-secondary);
+        border-bottom: 2px solid var(--border);
+        box-shadow: 0 2px 4px var(--shadow);
+        position: relative;
+        z-index: 20;
+      }
+      
+      .main-tab {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        padding: 12px 20px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 14px;
+        font-weight: 600;
+        border-bottom: 3px solid transparent;
+        margin-right: 8px;
+        position: relative;
+      }
+      
+      .main-tab:hover {
+        color: var(--text);
+        background: var(--panel-hover);
+      }
+      
+      .main-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+        background: var(--panel);
+      }
+      
+      .main-tabs .theme-toggle {
+        margin-left: auto;
+      }
+      
+      /* 主内容区域 */
+      .main-content {
+        display: none;
+        height: calc(100vh - 50px);
+        flex-direction: column;
+      }
+      
+      .main-content.active {
+        display: flex;
+      }
+      
+      /* 调整原有布局 */
+      .split {
+        height: calc(100% - 73px);
+      }
+      
+      /* Storage页签样式 */
+      .storage-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 1px 3px var(--shadow);
+      }
+      
+      .storage-type-tabs {
+        display: flex;
+        gap: 4px;
+      }
+      
+      .storage-type-tab {
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 12px;
+        font-weight: 500;
+      }
+      
+      .storage-type-tab:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent);
+      }
+      
+      .storage-type-tab.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+      }
+      
+      .storage-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      
+      .storage-actions button {
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 12px;
+        font-weight: 500;
+      }
+      
+      .storage-actions button:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      
+      /* Storage容器布局 */
+      .storage-container {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        height: calc(100% - 73px);
+        gap: 1px;
+        background: var(--border);
+      }
+      
+      .storage-list {
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      
+      .storage-search {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .storage-search input {
+        width: 100%;
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        transition: var(--transition);
+      }
+      
+      .storage-search input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+      }
+      
+      .storage-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--panel);
+        flex: 1;
+      }
+      
+      .storage-table thead {
+        position: sticky;
+        top: 0;
+        background: var(--bg-secondary);
+        z-index: 1;
+        box-shadow: 0 1px 2px var(--shadow);
+      }
+      
+      .storage-table th,
+      .storage-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        vertical-align: top;
+      }
+      
+      .storage-table th {
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      
+      .storage-table tbody tr {
+        transition: var(--transition);
+        cursor: pointer;
+      }
+      
+      .storage-table tbody tr:hover {
+        background: var(--panel-hover);
+      }
+      
+      .storage-table tbody tr.selected {
+        background: rgba(66, 184, 131, 0.15);
+        border-left: 3px solid var(--accent);
+      }
+      
+      .storage-value {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 12px;
+      }
+      
+      .storage-actions-cell {
+        white-space: nowrap;
+      }
+      
+      .storage-actions-cell button {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+        margin-right: 4px;
+        transition: var(--transition);
+      }
+      
+      .storage-actions-cell button:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent);
+      }
+      
+      .storage-actions-cell .delete-btn:hover {
+        background: var(--danger);
+        color: white;
+        border-color: var(--danger);
+      }
+      
+      /* Storage编辑器 */
+      .storage-editor {
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      
+      .editor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-secondary);
+      }
+      
+      .editor-header h3 {
+        margin: 0;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      
+      .editor-actions {
+        display: flex;
+        gap: 8px;
+      }
+      
+      .editor-actions button {
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 11px;
+        font-weight: 500;
+      }
+      
+      .editor-actions button:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent);
+      }
+      
+      .editor-actions #saveStorageItem {
+        background: var(--success);
+        color: white;
+        border-color: var(--success);
+      }
+      
+      .editor-actions #saveStorageItem:hover {
+        background: var(--accent-dark);
+        border-color: var(--accent-dark);
+      }
+      
+      .editor-content {
+        padding: 16px;
+        flex: 1;
+        overflow: auto;
+      }
+      
+      .form-group {
+        margin-bottom: 16px;
+      }
+      
+      .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--text);
+        font-weight: 600;
+        font-size: 13px;
+      }
+      
+      .form-group input,
+      .form-group textarea {
+        width: 100%;
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        transition: var(--transition);
+        resize: vertical;
+      }
+      
+      .form-group input:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+      }
+      
+      .editor-tools {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      
+      .editor-tools button {
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 11px;
+        font-weight: 500;
+      }
+      
+      .editor-tools button:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      
+      /* 空状态样式 */
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      
+      .empty-state .icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+      }
+      
       /* 响应式设计 */
       @media (max-width: 1200px) {
         .split {
@@ -683,68 +1060,144 @@
         .toolbar input[type="text"] {
           min-width: 200px;
         }
+        
+        .storage-container {
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr 300px;
+        }
+        
+        .main-tabs {
+          flex-wrap: wrap;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="toolbar">
-      <button id="toggle">⏸️ Pause</button>
-      <button id="clear">🗑️ Clear</button>
-      <input id="filter" type="text" placeholder="🔍 Filter by URL, method, status, type..." />
-      <div class="suffix-filter">
-        <span class="suffix-label">📁 后缀:</span>
-        <select id="suffix-mode">
-          <option value="include">包含</option>
-          <option value="exclude">排除</option>
-        </select>
-        <input id="suffix-filter" type="text" placeholder=".json,.php" title="输入文件后缀，用逗号分隔" />
-      </div>
-      <select id="method">
-        <option value="">All methods</option>
-        <option>GET</option>
-        <option>POST</option>
-        <option>PUT</option>
-        <option>PATCH</option>
-        <option>DELETE</option>
-        <option>OPTIONS</option>
-        <option>HEAD</option>
-      </select>
-      <label>
-        <input id="captureBodies" type="checkbox" checked /> 📝 Bodies
-      </label>
-      <label>
-        <input id="enableAESDecrypt" type="checkbox" checked /> 🔐 AES Decrypt
-      </label>
-      <button id="applyAESDecrypt">✨ AES Apply</button>
-      <button id="export">📤 Export JSON</button>
+    <!-- 顶级页签导航 -->
+    <div class="main-tabs">
+      <button data-main-tab="network" class="main-tab active">🌐 Network</button>
+      <button data-main-tab="storage" class="main-tab">💾 储存</button>
       <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
     </div>
-    <div class="split">
-      <div class="left">
-        <table class="table" id="table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Method</th>
-              <th>URL</th>
-              <th>Status</th>
-              <th>Type</th>
-              <th>Time (ms)</th>
-              <th>Size</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
-      <div class="right">
-        <div class="tabs">
-          <button data-tab="overview" class="active">Overview</button>
-          <button data-tab="request">Request</button>
-          <button data-tab="response">Response</button>
-          <button data-tab="headers">Headers</button>
-          <button data-tab="timing">Timing</button>
+
+    <!-- Network 页签内容 -->
+    <div id="network-content" class="main-content active">
+      <div class="toolbar">
+        <button id="toggle">⏸️ Pause</button>
+        <button id="clear">🗑️ Clear</button>
+        <input id="filter" type="text" placeholder="🔍 Filter by URL, method, status, type..." />
+        <div class="suffix-filter">
+          <span class="suffix-label">📁 后缀:</span>
+          <select id="suffix-mode">
+            <option value="include">包含</option>
+            <option value="exclude">排除</option>
+          </select>
+          <input id="suffix-filter" type="text" placeholder=".json,.php" title="输入文件后缀，用逗号分隔" />
         </div>
-        <div id="pane" style="overflow:auto"></div>
+        <select id="method">
+          <option value="">All methods</option>
+          <option>GET</option>
+          <option>POST</option>
+          <option>PUT</option>
+          <option>PATCH</option>
+          <option>DELETE</option>
+          <option>OPTIONS</option>
+          <option>HEAD</option>
+        </select>
+        <label>
+          <input id="captureBodies" type="checkbox" checked /> 📝 Bodies
+        </label>
+        <label>
+          <input id="enableAESDecrypt" type="checkbox" checked /> 🔐 AES Decrypt
+        </label>
+        <button id="applyAESDecrypt">✨ AES Apply</button>
+        <button id="export">📤 Export JSON</button>
+      </div>
+      <div class="split">
+        <div class="left">
+          <table class="table" id="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Method</th>
+                <th>URL</th>
+                <th>Status</th>
+                <th>Type</th>
+                <th>Time (ms)</th>
+                <th>Size</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="right">
+          <div class="tabs">
+            <button data-tab="overview" class="active">Overview</button>
+            <button data-tab="request">Request</button>
+            <button data-tab="response">Response</button>
+            <button data-tab="headers">Headers</button>
+            <button data-tab="timing">Timing</button>
+          </div>
+          <div id="pane" style="overflow:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage 页签内容 -->
+    <div id="storage-content" class="main-content">
+      <div class="storage-toolbar">
+        <div class="storage-type-tabs">
+          <button data-storage-type="localStorage" class="storage-type-tab active">📁 localStorage</button>
+          <button data-storage-type="sessionStorage" class="storage-type-tab">🔒 sessionStorage</button>
+        </div>
+        <div class="storage-actions">
+          <button id="refreshStorage">🔄 刷新</button>
+          <button id="addStorageItem">➕ 添加</button>
+          <button id="clearStorage">🗑️ 清空</button>
+          <button id="exportStorage">📤 导出</button>
+          <button id="importStorage">📥 导入</button>
+        </div>
+      </div>
+      <div class="storage-container">
+        <div class="storage-list">
+          <div class="storage-search">
+            <input id="storageFilter" type="text" placeholder="🔍 搜索键名或值..." />
+          </div>
+          <table class="storage-table" id="storageTable">
+            <thead>
+              <tr>
+                <th width="30%">键名 (Key)</th>
+                <th width="50%">值 (Value)</th>
+                <th width="20%">操作</th>
+              </tr>
+            </thead>
+            <tbody id="storageRows"></tbody>
+          </table>
+        </div>
+        <div class="storage-editor">
+          <div class="editor-header">
+            <h3 id="editorTitle">编辑存储项</h3>
+            <div class="editor-actions">
+              <button id="saveStorageItem">💾 保存</button>
+              <button id="cancelEdit">❌ 取消</button>
+            </div>
+          </div>
+          <div class="editor-content">
+            <div class="form-group">
+              <label for="editKey">键名:</label>
+              <input type="text" id="editKey" placeholder="输入键名" />
+            </div>
+            <div class="form-group">
+              <label for="editValue">值:</label>
+              <textarea id="editValue" placeholder="输入值，支持JSON格式" rows="10"></textarea>
+            </div>
+            <div class="editor-tools">
+              <button id="formatJSON">🎨 格式化JSON</button>
+              <button id="minifyJSON">📦 压缩JSON</button>
+              <button id="validateJSON">✅ 验证JSON</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <!-- Highlight.js本地文件 -->

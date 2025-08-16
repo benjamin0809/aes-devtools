@@ -1047,11 +1047,13 @@
   }
 
   function init() {
+    wireMainTabs();
     wireToolbar();
     ensurePageInstrumentation();
     startPollingPlainEvents();
     subscribeToNetwork(); // 现在包含了早期请求捕获
     setupCopyButtons();
+    initStorageTab();
     
     // 初始化highlight.js
     if (typeof hljs !== 'undefined') {
@@ -1059,7 +1061,7 @@
       console.log('Highlight.js已加载，版本:', hljs.versionString || 'unknown');
     }
     
-    console.log('网络监控已启动，支持早期请求捕获');
+    console.log('AES DevTools已启动，支持网络监控和储存管理');
   }
   
   // 设置复制按钮功能
@@ -1336,6 +1338,522 @@
     const themeToggle = document.getElementById('themeToggle');
     themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
     themeToggle.title = theme === 'light' ? '切换到深色主题' : '切换到浅色主题';
+  }
+
+  // 主页签切换功能
+  function wireMainTabs() {
+    const mainTabs = document.querySelectorAll('.main-tab');
+    const mainContents = document.querySelectorAll('.main-content');
+    
+    mainTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.getAttribute('data-main-tab');
+        
+        // 更新页签状态
+        mainTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // 更新内容显示
+        mainContents.forEach(content => {
+          content.classList.remove('active');
+          if (content.id === `${targetTab}-content`) {
+            content.classList.add('active');
+          }
+        });
+        
+        // 如果切换到储存页签，刷新数据
+        if (targetTab === 'storage') {
+          refreshStorageData();
+        }
+      });
+    });
+  }
+  
+  // 储存页签相关变量
+  let currentStorageType = 'localStorage';
+  let storageData = [];
+  let filteredStorageData = [];
+  let selectedStorageKey = null;
+  let isEditing = false;
+  
+  // 初始化储存页签
+  function initStorageTab() {
+    wireStorageTypeSwitch();
+    wireStorageActions();
+    wireStorageEditor();
+    wireStorageSearch();
+    
+    // 初始加载数据
+    refreshStorageData();
+  }
+  
+  // 储存类型切换
+  function wireStorageTypeSwitch() {
+    const typeTabs = document.querySelectorAll('.storage-type-tab');
+    
+    typeTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const storageType = tab.getAttribute('data-storage-type');
+        
+        // 更新按钮状态
+        typeTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // 更新当前储存类型
+        currentStorageType = storageType;
+        
+        // 刷新数据
+        refreshStorageData();
+        
+        // 清除编辑状态
+        clearStorageEditor();
+      });
+    });
+  }
+  
+  // 储存操作按钮
+  function wireStorageActions() {
+    document.getElementById('refreshStorage').addEventListener('click', refreshStorageData);
+    document.getElementById('addStorageItem').addEventListener('click', addNewStorageItem);
+    document.getElementById('clearStorage').addEventListener('click', clearStorageType);
+    document.getElementById('exportStorage').addEventListener('click', exportStorageData);
+    document.getElementById('importStorage').addEventListener('click', importStorageData);
+  }
+  
+  // 储存编辑器
+  function wireStorageEditor() {
+    document.getElementById('saveStorageItem').addEventListener('click', saveStorageItem);
+    document.getElementById('cancelEdit').addEventListener('click', clearStorageEditor);
+    document.getElementById('formatJSON').addEventListener('click', formatJSONValue);
+    document.getElementById('minifyJSON').addEventListener('click', minifyJSONValue);
+    document.getElementById('validateJSON').addEventListener('click', validateJSONValue);
+  }
+  
+  // 储存搜索
+  function wireStorageSearch() {
+    const searchInput = document.getElementById('storageFilter');
+    searchInput.addEventListener('input', filterStorageData);
+  }
+  
+  // 刷新储存数据
+  function refreshStorageData() {
+    const code = `(function(){
+      try {
+        const storage = ${currentStorageType};
+        const data = [];
+        for (let i = 0; i < storage.length; i++) {
+          const key = storage.key(i);
+          const value = storage.getItem(key);
+          data.push({ key, value });
+        }
+        return data;
+      } catch (e) {
+        return [];
+      }
+    })()`;
+    
+    chrome.devtools.inspectedWindow.eval(code, (result) => {
+      storageData = result || [];
+      filterStorageData();
+      renderStorageTable();
+    });
+  }
+  
+  // 过滤储存数据
+  function filterStorageData() {
+    const searchText = document.getElementById('storageFilter').value.toLowerCase();
+    
+    if (!searchText) {
+      filteredStorageData = [...storageData];
+    } else {
+      filteredStorageData = storageData.filter(item => 
+        item.key.toLowerCase().includes(searchText) || 
+        item.value.toLowerCase().includes(searchText)
+      );
+    }
+    
+    renderStorageTable();
+  }
+  
+  // 渲染储存表格
+  function renderStorageTable() {
+    const tbody = document.getElementById('storageRows');
+    tbody.innerHTML = '';
+    
+    if (filteredStorageData.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3" class="empty-state">
+            <div class="icon">📦</div>
+            <div>没有找到储存数据</div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    filteredStorageData.forEach((item, index) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = item.key;
+      
+      if (item.key === selectedStorageKey) {
+        tr.classList.add('selected');
+      }
+      
+      // 处理值显示
+      let displayValue = item.value;
+      let valueType = 'text';
+      
+      try {
+        JSON.parse(item.value);
+        valueType = 'json';
+        displayValue = item.value.length > 100 ? item.value.substring(0, 100) + '...' : item.value;
+      } catch (e) {
+        displayValue = item.value.length > 100 ? item.value.substring(0, 100) + '...' : item.value;
+      }
+      
+      tr.innerHTML = `
+        <td title="${escapeHtml(item.key)}">${escapeHtml(item.key)}</td>
+        <td class="storage-value" title="${escapeHtml(item.value)}">
+          ${valueType === 'json' ? '<span style="color: var(--accent);">🧩</span> ' : ''}${escapeHtml(displayValue)}
+        </td>
+        <td class="storage-actions-cell">
+          <button class="edit-btn" data-key="${escapeHtml(item.key)}">✏️ 编辑</button>
+          <button class="copy-btn" data-key="${escapeHtml(item.key)}">📋 复制</button>
+          <button class="delete-btn" data-key="${escapeHtml(item.key)}">🗑️ 删除</button>
+        </td>
+      `;
+      
+      // 添加行点击事件
+      tr.addEventListener('click', () => selectStorageItem(item.key));
+      
+      tbody.appendChild(tr);
+    });
+    
+    // 绑定操作按钮事件
+    bindStorageActionButtons();
+  }
+  
+  // 绑定储存操作按钮
+  function bindStorageActionButtons() {
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const key = btn.getAttribute('data-key');
+        editStorageItem(key);
+      });
+    });
+    
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const key = btn.getAttribute('data-key');
+        copyStorageValue(key);
+      });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const key = btn.getAttribute('data-key');
+        deleteStorageItem(key);
+      });
+    });
+  }
+  
+  // 选择储存项
+  function selectStorageItem(key) {
+    selectedStorageKey = key;
+    
+    // 更新表格选中状态
+    document.querySelectorAll('#storageRows tr').forEach(tr => {
+      tr.classList.toggle('selected', tr.dataset.key === key);
+    });
+    
+    // 在编辑器中显示
+    const item = storageData.find(item => item.key === key);
+    if (item) {
+      displayStorageItemInEditor(item);
+    }
+  }
+  
+  // 在编辑器中显示储存项
+  function displayStorageItemInEditor(item) {
+    document.getElementById('editKey').value = item.key;
+    document.getElementById('editValue').value = item.value;
+    document.getElementById('editorTitle').textContent = `编辑: ${item.key}`;
+    
+    // 格式化JSON（如果是有效JSON）
+    try {
+      const parsed = JSON.parse(item.value);
+      document.getElementById('editValue').value = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      // 不是JSON，保持原样
+    }
+    
+    isEditing = true;
+  }
+  
+  // 添加新储存项
+  function addNewStorageItem() {
+    selectedStorageKey = null;
+    document.getElementById('editKey').value = '';
+    document.getElementById('editValue').value = '';
+    document.getElementById('editorTitle').textContent = '添加新项';
+    
+    // 清除表格选中状态
+    document.querySelectorAll('#storageRows tr').forEach(tr => {
+      tr.classList.remove('selected');
+    });
+    
+    isEditing = false;
+    
+    // 聚焦到键名输入框
+    document.getElementById('editKey').focus();
+  }
+  
+  // 保存储存项
+  function saveStorageItem() {
+    const key = document.getElementById('editKey').value.trim();
+    const value = document.getElementById('editValue').value;
+    
+    if (!key) {
+      alert('请输入键名');
+      return;
+    }
+    
+    const code = `(function(){
+      try {
+        ${currentStorageType}.setItem('${escapeForJS(key)}', '${escapeForJS(value)}');
+        return { success: true };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    })()`;
+    
+    chrome.devtools.inspectedWindow.eval(code, (result) => {
+      if (result && result.success) {
+        refreshStorageData();
+        selectedStorageKey = key;
+        
+        // 显示成功消息
+        const saveBtn = document.getElementById('saveStorageItem');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = '✅ 已保存';
+        saveBtn.style.background = 'var(--success)';
+        
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = '';
+        }, 2000);
+      } else {
+        alert(`保存失败: ${result?.error || '未知错误'}`);
+      }
+    });
+  }
+  
+  // 清除编辑器
+  function clearStorageEditor() {
+    document.getElementById('editKey').value = '';
+    document.getElementById('editValue').value = '';
+    document.getElementById('editorTitle').textContent = '编辑存储项';
+    selectedStorageKey = null;
+    isEditing = false;
+    
+    // 清除表格选中状态
+    document.querySelectorAll('#storageRows tr').forEach(tr => {
+      tr.classList.remove('selected');
+    });
+  }
+  
+  // 编辑储存项
+  function editStorageItem(key) {
+    const item = storageData.find(item => item.key === key);
+    if (item) {
+      selectStorageItem(key);
+    }
+  }
+  
+  // 复制储存值
+  function copyStorageValue(key) {
+    const item = storageData.find(item => item.key === key);
+    if (item) {
+      copyTextToClipboard(item.value, event.target);
+    }
+  }
+  
+  // 删除储存项
+  function deleteStorageItem(key) {
+    if (!confirm(`确定要删除键 "${key}" 吗？`)) {
+      return;
+    }
+    
+    const code = `(function(){
+      try {
+        ${currentStorageType}.removeItem('${escapeForJS(key)}');
+        return { success: true };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    })()`;
+    
+    chrome.devtools.inspectedWindow.eval(code, (result) => {
+      if (result && result.success) {
+        refreshStorageData();
+        if (selectedStorageKey === key) {
+          clearStorageEditor();
+        }
+      } else {
+        alert(`删除失败: ${result?.error || '未知错误'}`);
+      }
+    });
+  }
+  
+  // 清空当前储存类型
+  function clearStorageType() {
+    if (!confirm(`确定要清空所有 ${currentStorageType} 数据吗？`)) {
+      return;
+    }
+    
+    const code = `(function(){
+      try {
+        ${currentStorageType}.clear();
+        return { success: true };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    })()`;
+    
+    chrome.devtools.inspectedWindow.eval(code, (result) => {
+      if (result && result.success) {
+        refreshStorageData();
+        clearStorageEditor();
+      } else {
+        alert(`清空失败: ${result?.error || '未知错误'}`);
+      }
+    });
+  }
+  
+  // 导出储存数据
+  function exportStorageData() {
+    const exportData = {
+      type: currentStorageType,
+      timestamp: new Date().toISOString(),
+      data: Object.fromEntries(storageData.map(item => [item.key, item.value]))
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentStorageType}-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  
+  // 导入储存数据
+  function importStorageData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importData = JSON.parse(e.target.result);
+          
+          if (!importData.data || typeof importData.data !== 'object') {
+            alert('无效的导入文件格式');
+            return;
+          }
+          
+          const entries = Object.entries(importData.data);
+          let successCount = 0;
+          
+          entries.forEach(([key, value]) => {
+            const code = `(function(){
+              try {
+                ${currentStorageType}.setItem('${escapeForJS(key)}', '${escapeForJS(value)}');
+                return true;
+              } catch (e) {
+                return false;
+              }
+            })()`;
+            
+            chrome.devtools.inspectedWindow.eval(code, (result) => {
+              if (result) successCount++;
+              
+              // 最后一个完成时刷新数据
+              if (successCount + (entries.length - successCount) === entries.length) {
+                refreshStorageData();
+                alert(`导入完成: ${successCount}/${entries.length} 项成功`);
+              }
+            });
+          });
+          
+        } catch (e) {
+          alert('导入文件解析失败: ' + e.message);
+        }
+      };
+      
+      reader.readAsText(file);
+    });
+    
+    input.click();
+  }
+  
+  // JSON格式化
+  function formatJSONValue() {
+    const textarea = document.getElementById('editValue');
+    try {
+      const parsed = JSON.parse(textarea.value);
+      textarea.value = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      alert('无效的JSON格式: ' + e.message);
+    }
+  }
+  
+  // JSON压缩
+  function minifyJSONValue() {
+    const textarea = document.getElementById('editValue');
+    try {
+      const parsed = JSON.parse(textarea.value);
+      textarea.value = JSON.stringify(parsed);
+    } catch (e) {
+      alert('无效的JSON格式: ' + e.message);
+    }
+  }
+  
+  // JSON验证
+  function validateJSONValue() {
+    const textarea = document.getElementById('editValue');
+    try {
+      JSON.parse(textarea.value);
+      alert('✅ JSON格式有效');
+    } catch (e) {
+      alert('❌ JSON格式无效: ' + e.message);
+    }
+  }
+  
+  // 转义JS字符串
+  function escapeForJS(str) {
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+  }
+  
+  // HTML转义函数（如果还没有定义）
+  if (typeof escapeHtml === 'undefined') {
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
   }
 
   init();
