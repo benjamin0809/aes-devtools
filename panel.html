@@ -1,0 +1,768 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AES DevTools</title>
+    <style>
+      :root {
+        /* Vue DevTools 浅色主题（默认）*/
+        --bg: #ffffff;
+        --bg-secondary: #f8f9fa;
+        --panel: #ffffff;
+        --panel-hover: #f1f3f4;
+        --text: #2c3e50;
+        --text-secondary: #606060;
+        --muted: #8e8e93;
+        --accent: #42b883;
+        --accent-dark: #369870;
+        --accent-light: #4fc08d;
+        --border: #e1e4e8;
+        --border-light: #d1d5da;
+        --danger: #e74c3c;
+        --success: #42b883;
+        --warning: #f39c12;
+        --info: #3498db;
+        --shadow: rgba(0, 0, 0, 0.1);
+        --transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+      }
+      
+      /* 深色主题 */
+      [data-theme="dark"] {
+        --bg: #1e1e1e;
+        --bg-secondary: #252526;
+        --panel: #2d2d30;
+        --panel-hover: #37373a;
+        --text: #cccccc;
+        --text-secondary: #a9a9a9;
+        --muted: #969696;
+        --accent: #42b883;
+        --accent-dark: #369870;
+        --accent-light: #4fc08d;
+        --border: #3c3c3c;
+        --border-light: #464647;
+        --danger: #f48771;
+        --success: #42b883;
+        --warning: #e6cc77;
+        --info: #64b5f6;
+        --shadow: rgba(0, 0, 0, 0.3);
+        --transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+      }
+      html, body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        transition: var(--transition);
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 1px 3px var(--shadow);
+        position: relative;
+        z-index: 10;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+      }
+      
+      /* 主题切换按钮 */
+      .theme-toggle {
+        background: var(--bg-secondary) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--muted) !important;
+        padding: 6px 8px !important;
+        border-radius: 6px !important;
+        cursor: pointer;
+        transition: var(--transition) !important;
+        font-size: 14px;
+        margin-left: auto;
+        min-width: 32px;
+      }
+      
+      .theme-toggle:hover {
+        background: var(--panel-hover) !important;
+        color: var(--accent) !important;
+        border-color: var(--accent) !important;
+      }
+      .toolbar input[type="text"] {
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 8px;
+        border-radius: 6px;
+        flex: 1;
+        transition: var(--transition);
+        font-size: 12px;
+        min-width: 150px;
+      }
+      
+      .toolbar input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+      }
+      
+      .toolbar button, .toolbar select {
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      
+      .toolbar button:hover, .toolbar select:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      
+      .toolbar button:active {
+        transform: translateY(1px);
+      }
+      
+      .toolbar label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text);
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+      }
+      
+      .toolbar label:hover {
+        color: var(--accent);
+      }
+      
+      .toolbar input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        height: calc(100% - 73px);
+        gap: 1px;
+        background: var(--border);
+      }
+      
+      .left, .right {
+        height: 100%;
+        overflow: auto;
+        background: var(--panel);
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--panel);
+      }
+      
+      .table thead {
+        position: sticky;
+        top: 0;
+        background: var(--bg-secondary);
+        z-index: 1;
+        box-shadow: 0 1px 2px var(--shadow);
+      }
+      
+      .table thead th {
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+      }
+      
+      th, td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: left;
+      }
+      
+      tbody tr {
+        transition: var(--transition);
+        cursor: pointer;
+      }
+      
+      tbody tr:hover {
+        background: var(--panel-hover);
+      }
+      
+      tbody tr.active {
+        background: rgba(66, 184, 131, 0.15);
+        border-left: 3px solid var(--accent);
+      }
+      
+      tbody tr.active td {
+        color: var(--text);
+      }
+      .right {
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+      
+      .tabs {
+        display: flex;
+        gap: 0;
+        padding: 0;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        overflow-x: auto;
+      }
+      
+      .tabs button {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 13px;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        position: relative;
+      }
+      
+      .tabs button:hover {
+        background: var(--panel-hover);
+        color: var(--text);
+      }
+      
+      .tabs button.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+        background: var(--panel);
+      }
+      
+      .tabs button.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--accent);
+      }
+      pre {
+        margin: 0;
+        padding: 16px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .status {
+        font-weight: 600;
+      }
+      .status.ok { color: var(--success); }
+      .status.warn { color: var(--warning); }
+      .status.err { color: var(--danger); }
+      
+      /* 右侧面板内容区域 */
+      #pane {
+        padding: 16px;
+        background: var(--panel);
+        overflow: auto;
+      }
+      
+      /* 复制按钮样式 */
+      .code-container {
+        position: relative;
+        margin: 8px 0;
+      }
+      
+      .copy-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--bg-secondary);
+        color: var(--muted);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 11px;
+        cursor: pointer;
+        z-index: 10;
+        opacity: 0.8;
+        box-shadow: 0 2px 4px var(--shadow);
+        transition: var(--transition);
+        font-weight: 500;
+      }
+      
+      .copy-btn:hover {
+        opacity: 1;
+        color: var(--accent);
+        border-color: var(--accent);
+        background: var(--panel);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px var(--shadow);
+      }
+      
+      .copy-success {
+        background: var(--success) !important;
+        color: white !important;
+        border-color: var(--success) !important;
+      }
+      
+      .copy-error {
+        background: var(--danger) !important;
+        color: white !important;
+        border-color: var(--danger) !important;
+      }
+      
+      /* URL后缀筛选样式 */
+      .suffix-filter {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: 12px;
+      }
+      
+      .suffix-filter input {
+        width: 100px;
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        transition: var(--transition);
+      }
+      
+      .suffix-filter input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+      }
+      
+      .suffix-filter select {
+        width: 60px;
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 6px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: var(--transition);
+      }
+      
+      .suffix-filter select:hover {
+        border-color: var(--accent);
+      }
+      
+      .suffix-label {
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      
+      /* Highlight.js自定义样式 - 适配深色主题 */
+      .hljs {
+        background: var(--bg-secondary) !important;
+        color: var(--text) !important;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px !important;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        overflow-x: auto;
+        box-shadow: 0 2px 4px var(--shadow);
+        margin: 8px 0;
+      }
+      
+      /* AES解密内容特殊样式 */
+      .code-container .hljs {
+        box-shadow: 0 2px 8px rgba(66, 184, 131, 0.2);
+        border-left: 4px solid var(--success);
+        margin: 8px 0;
+      }
+      
+      /* JSON语法高亮优化 - 适配深色主题 */
+      .hljs .hljs-attr {
+        color: var(--accent-light) !important;
+        font-weight: 600 !important;
+      }
+      
+      .hljs .hljs-string {
+        color: var(--success) !important;
+      }
+      
+      .hljs .hljs-number {
+        color: var(--danger) !important;
+      }
+      
+      .hljs .hljs-literal {
+        color: var(--info) !important;
+      }
+      
+      .hljs .hljs-punctuation {
+        color: var(--text) !important;
+      }
+      
+      .hljs .hljs-keyword {
+        color: var(--warning) !important;
+        font-weight: 600 !important;
+      }
+      
+      .hljs .hljs-comment {
+        color: var(--muted) !important;
+        font-style: italic;
+      }
+      
+      /* 折叠功能样式 - Vue DevTools 风格 */
+      .collapsible-section {
+        margin: 12px 0;
+      }
+      
+      .collapsible-header {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 10px 12px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        user-select: none;
+        transition: var(--transition);
+        margin-bottom: 8px;
+      }
+      
+      .collapsible-header:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px var(--shadow);
+      }
+      
+      .collapsible-toggle {
+        font-family: monospace;
+        font-size: 14px;
+        color: var(--accent);
+        margin-right: 10px;
+        transition: var(--transition);
+        display: inline-block;
+        width: 16px;
+        text-align: center;
+        font-weight: bold;
+      }
+      
+      .collapsible-toggle.collapsed {
+        transform: rotate(-90deg);
+      }
+      
+      .collapsible-title {
+        flex: 1;
+        font-weight: 600;
+        margin: 0;
+        font-size: 14px;
+      }
+      
+      .collapsible-content {
+        margin-top: 0;
+        transition: var(--transition);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      
+      .collapsible-content.collapsed {
+        display: none;
+      }
+      
+      /* 不同类型内容的标题颜色 */
+      .collapsible-title.aes-decrypted {
+        color: var(--success);
+      }
+      
+      .collapsible-title.function-decrypted {
+        color: var(--warning);
+      }
+      
+      .collapsible-title.original {
+        color: var(--text);
+      }
+      
+      /* 现代化滚动条样式 */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+        border-radius: 4px;
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-light);
+        border-radius: 4px;
+        transition: var(--transition);
+      }
+      
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--muted);
+      }
+      
+      /* 加载状态样式 */
+      .loading {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+      
+      /* 状态徽章样式 */
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      
+      .status-badge.success {
+        background: rgba(66, 184, 131, 0.15);
+        color: var(--success);
+        border: 1px solid rgba(66, 184, 131, 0.3);
+      }
+      
+      .status-badge.warning {
+        background: rgba(230, 204, 119, 0.15);
+        color: var(--warning);
+        border: 1px solid rgba(230, 204, 119, 0.3);
+      }
+      
+      .status-badge.error {
+        background: rgba(244, 135, 113, 0.15);
+        color: var(--danger);
+        border: 1px solid rgba(244, 135, 113, 0.3);
+      }
+      
+      .status-badge.pending {
+        background: rgba(158, 158, 158, 0.15);
+        color: var(--muted);
+        border: 1px solid rgba(158, 158, 158, 0.3);
+        animation: pulse 2s infinite;
+      }
+      
+      /* 待处理请求的行样式 */
+      .pending-request {
+        opacity: 0.8;
+        background: rgba(var(--accent-rgb, 66, 184, 131), 0.05) !important;
+      }
+      
+      .pending-request:hover {
+        opacity: 1;
+        background: rgba(var(--accent-rgb, 66, 184, 131), 0.1) !important;
+      }
+      
+      /* 脉冲动画 */
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+      
+      /* 方法标签样式 */
+      .method-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        min-width: 40px;
+        justify-content: center;
+      }
+      
+      .method-tag.get {
+        background: rgba(66, 184, 131, 0.15);
+        color: var(--success);
+      }
+      
+      .method-tag.post {
+        background: rgba(100, 181, 246, 0.15);
+        color: var(--info);
+      }
+      
+      .method-tag.put {
+        background: rgba(230, 204, 119, 0.15);
+        color: var(--warning);
+      }
+      
+      .method-tag.delete {
+        background: rgba(244, 135, 113, 0.15);
+        color: var(--danger);
+      }
+      
+      /* URL单元格样式 */
+      .url-cell {
+        max-width: 300px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 12px;
+        color: var(--accent);
+      }
+      
+      /* 悬浮提示样式 */
+      .tooltip {
+        position: relative;
+        cursor: help;
+      }
+      
+      .tooltip::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg);
+        color: var(--text);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: var(--transition);
+        box-shadow: 0 4px 12px var(--shadow);
+        z-index: 1000;
+        border: 1px solid var(--border);
+      }
+      
+      .tooltip:hover::after {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(-4px);
+      }
+      
+      /* 响应式设计 */
+      @media (max-width: 1200px) {
+        .split {
+          grid-template-columns: 1fr;
+          grid-template-rows: 300px 1fr;
+        }
+        
+        .toolbar {
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        
+        .toolbar input[type="text"] {
+          min-width: 200px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <button id="toggle">⏸️ Pause</button>
+      <button id="clear">🗑️ Clear</button>
+      <input id="filter" type="text" placeholder="🔍 Filter by URL, method, status, type..." />
+      <div class="suffix-filter">
+        <span class="suffix-label">📁 后缀:</span>
+        <select id="suffix-mode">
+          <option value="include">包含</option>
+          <option value="exclude">排除</option>
+        </select>
+        <input id="suffix-filter" type="text" placeholder=".json,.php" title="输入文件后缀，用逗号分隔" />
+      </div>
+      <select id="method">
+        <option value="">All methods</option>
+        <option>GET</option>
+        <option>POST</option>
+        <option>PUT</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+        <option>OPTIONS</option>
+        <option>HEAD</option>
+      </select>
+      <label>
+        <input id="captureBodies" type="checkbox" checked /> 📝 Bodies
+      </label>
+      <label>
+        <input id="enableAESDecrypt" type="checkbox" checked /> 🔐 AES Decrypt
+      </label>
+      <button id="applyAESDecrypt">✨ AES Apply</button>
+      <button id="export">📤 Export JSON</button>
+      <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
+    </div>
+    <div class="split">
+      <div class="left">
+        <table class="table" id="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Method</th>
+              <th>URL</th>
+              <th>Status</th>
+              <th>Type</th>
+              <th>Time (ms)</th>
+              <th>Size</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="right">
+        <div class="tabs">
+          <button data-tab="overview" class="active">Overview</button>
+          <button data-tab="request">Request</button>
+          <button data-tab="response">Response</button>
+          <button data-tab="headers">Headers</button>
+          <button data-tab="timing">Timing</button>
+        </div>
+        <div id="pane" style="overflow:auto"></div>
+      </div>
+    </div>
+    <!-- Highlight.js本地文件 -->
+    <link rel="stylesheet" href="highlight/default.min.css">
+    <script src="highlight/highlight.min.js"></script>
+    
+    <!-- CryptoJS -->
+    <script src="js/core.js"></script>
+    <script src="js/enc-base64.js"></script>
+    <script src="js/cipher-core.js"></script>
+    <script src="js/aes.js"></script>
+    <script src="js/mode-ecb.js"></script>
+    <script src="js/lib-typedarrays.js"></script>
+    
+    <!-- Main Script -->
+    <script src="panel.js"></script>
+  </body>
+  
+</html>
+
+

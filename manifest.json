@@ -1,0 +1,15 @@
+{
+  "name": "AES devtools",
+  "description": "DevTools panel to record and inspect all network requests and responses.",
+  "version": "0.1.0",
+  "manifest_version": 3,
+  "devtools_page": "devtools.html",
+  "permissions": [
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ]
+}
+
+
