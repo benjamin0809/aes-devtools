@@ -27,6 +27,140 @@
   // 新的请求管理系统
   const pendingRequests = new Map(); // 存储待完成的请求
   let requestCounter = 0;
+  
+  // 添加网络统计功能
+  let networkStats = {
+    total: 0,
+    success: 0,
+    warning: 0,
+    error: 0,
+    pending: 0,
+    startTime: Date.now()
+  };
+
+  // 搜索历史功能
+  let searchHistory = [];
+  const MAX_SEARCH_HISTORY = 20;
+  
+  // 从localStorage加载搜索历史
+  function loadSearchHistory() {
+    try {
+      const saved = localStorage.getItem('devtools-search-history');
+      if (saved) {
+        searchHistory = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('加载搜索历史失败:', e);
+      searchHistory = [];
+    }
+  }
+  
+  // 保存搜索历史到localStorage
+  function saveSearchHistory() {
+    try {
+      localStorage.setItem('devtools-search-history', JSON.stringify(searchHistory));
+    } catch (e) {
+      console.warn('保存搜索历史失败:', e);
+    }
+  }
+  
+  // 添加搜索历史
+  function addSearchHistory(searchText) {
+    if (!searchText.trim()) return;
+    
+    // 移除重复项
+    searchHistory = searchHistory.filter(item => item.text !== searchText);
+    
+    // 添加到开头
+    searchHistory.unshift({
+      text: searchText,
+      timestamp: Date.now()
+    });
+    
+    // 限制数量
+    if (searchHistory.length > MAX_SEARCH_HISTORY) {
+      searchHistory = searchHistory.slice(0, MAX_SEARCH_HISTORY);
+    }
+    
+    saveSearchHistory();
+    updateSearchHistoryDisplay();
+  }
+  
+  // 更新搜索历史显示
+  function updateSearchHistoryDisplay() {
+    const historyList = document.getElementById('searchHistoryList');
+    if (!historyList) return;
+    
+    if (searchHistory.length === 0) {
+      historyList.innerHTML = '<div class="search-history-item" style="color: var(--muted); text-align: center; padding: 16px;">暂无搜索历史</div>';
+      return;
+    }
+    
+    historyList.innerHTML = searchHistory.map(item => {
+      const time = new Date(item.timestamp);
+      const timeStr = time.toLocaleTimeString();
+      return `
+        <div class="search-history-item" data-text="${escapeHtml(item.text)}">
+          <span class="search-history-text" title="${escapeHtml(item.text)}">${escapeHtml(item.text)}</span>
+          <span class="search-history-time">${timeStr}</span>
+          <button class="search-history-remove" data-text="${escapeHtml(item.text)}" title="删除">✕</button>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  // 绑定搜索历史事件
+  function wireSearchHistory() {
+    const historyBtn = document.getElementById('searchHistoryBtn');
+    const historyDropdown = document.getElementById('searchHistoryDropdown');
+    const clearHistoryBtn = document.getElementById('clearSearchHistory');
+    
+    if (!historyBtn || !historyDropdown) return;
+    
+    // 显示/隐藏下拉菜单
+    historyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      historyDropdown.classList.toggle('show');
+    });
+    
+    // 点击外部关闭下拉菜单
+    document.addEventListener('click', () => {
+      historyDropdown.classList.remove('show');
+    });
+    
+    // 阻止下拉菜单内部点击事件冒泡
+    historyDropdown.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    
+    // 清除所有历史
+    clearHistoryBtn.addEventListener('click', () => {
+      searchHistory = [];
+      saveSearchHistory();
+      updateSearchHistoryDisplay();
+    });
+    
+    // 搜索历史项点击
+    historyDropdown.addEventListener('click', (e) => {
+      if (e.target.classList.contains('search-history-text') || e.target.closest('.search-history-item')) {
+        const item = e.target.closest('.search-history-item');
+        if (item) {
+          const searchText = item.dataset.text;
+          filterEl.value = searchText;
+          applyFilter();
+          historyDropdown.classList.remove('show');
+        }
+      }
+      
+      // 删除单个历史项
+      if (e.target.classList.contains('search-history-remove')) {
+        const searchText = e.target.dataset.text;
+        searchHistory = searchHistory.filter(item => item.text !== searchText);
+        saveSearchHistory();
+        updateSearchHistoryDisplay();
+      }
+    });
+  }
 
   function formatBytes(bytes) {
     if (bytes == null) return '';
@@ -47,6 +181,11 @@
     const method = methodEl.value;
     const suffixes = suffixFilterEl.value.trim().toLowerCase().split(',').filter(s => s);
     const suffixMode = suffixModeEl.value; // 'include' 或 'exclude'
+    
+    // 记录搜索历史
+    if (text) {
+      addSearchHistory(filterEl.value.trim());
+    }
     
     displayedRecords = allRecords.filter((r) => {
       // 方法过滤
@@ -493,6 +632,25 @@
   function onNewRecord(rec) {
     allRecords.push(rec);
     tryAttachPlainBodies(rec);
+    
+    // 更新网络统计
+    networkStats.total++;
+    if (rec.isEarlyCapture && !rec.isCompleted) {
+      networkStats.pending++;
+    } else if (rec.response?.status) {
+      const status = rec.response.status;
+      if (status >= 200 && status < 300) {
+        networkStats.success++;
+      } else if (status >= 300 && status < 400) {
+        networkStats.warning++;
+      } else {
+        networkStats.error++;
+      }
+    }
+    
+    // 更新统计显示
+    updateNetworkStats();
+    
     if (!isPaused) {
       applyFilter();
       if (displayedRecords.length === 1) {
@@ -567,6 +725,95 @@
       allRecords.forEach((r) => tryAESDecryptBodies(r, keys.key, keys.iv));
       if (selectedId) selectRecord(selectedId);
     });
+
+    // 批量解密功能
+    document.getElementById('batchDecrypt').addEventListener('click', async () => {
+      if (!enableAESDecryptEl.checked) {
+        alert('请先启用AES解密功能');
+        return;
+      }
+      
+      const keys = await getAESKeys();
+      if (!keys || !keys.key) {
+        alert('无法从sessionStorage.securityObject获取AES密钥');
+        return;
+      }
+      
+      const filteredRecords = displayedRecords.length > 0 ? displayedRecords : allRecords;
+      let successCount = 0;
+      let totalCount = filteredRecords.length;
+      
+      // 显示进度
+      const batchBtn = document.getElementById('batchDecrypt');
+      const originalText = batchBtn.textContent;
+      batchBtn.textContent = `🔓 解密中... (0/${totalCount})`;
+      batchBtn.disabled = true;
+      
+      // 批量解密
+      for (let i = 0; i < filteredRecords.length; i++) {
+        const record = filteredRecords[i];
+        tryAESDecryptBodies(record, keys.key, keys.iv);
+        successCount++;
+        
+        // 更新进度
+        batchBtn.textContent = `🔓 解密中... (${successCount}/${totalCount})`;
+        
+        // 每处理10个记录更新一次显示
+        if (i % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      }
+      
+      // 完成
+      batchBtn.textContent = `✅ 完成 (${successCount}/${totalCount})`;
+      batchBtn.style.background = 'var(--success)';
+      batchBtn.style.color = 'white';
+      
+      setTimeout(() => {
+        batchBtn.textContent = originalText;
+        batchBtn.style.background = '';
+        batchBtn.style.color = '';
+        batchBtn.disabled = false;
+      }, 2000);
+      
+      // 刷新显示
+      if (selectedId) selectRecord(selectedId);
+    });
+
+    // 批量导出功能
+    document.getElementById('batchExport').addEventListener('click', () => {
+      const filteredRecords = displayedRecords.length > 0 ? displayedRecords : allRecords;
+      
+      if (filteredRecords.length === 0) {
+        alert('没有可导出的记录');
+        return;
+      }
+      
+      // 创建导出数据
+      const exportData = {
+        exportInfo: {
+          timestamp: new Date().toISOString(),
+          totalRecords: filteredRecords.length,
+          filtered: displayedRecords.length > 0,
+          filters: {
+            text: filterEl.value,
+            method: methodEl.value,
+            suffixFilter: suffixFilterEl.value,
+            suffixMode: suffixModeEl.value
+          }
+        },
+        records: filteredRecords
+      };
+      
+      const data = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `network-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   function subscribeToNetwork() {
@@ -608,6 +855,20 @@
     rec.encodedDataLength = request.encodedDataLength;
     rec.timing = request.timing;
     rec.isCompleted = true;
+    
+    // 更新统计：减少pending，增加对应状态
+    if (rec.isEarlyCapture) {
+      networkStats.pending--;
+      const status = request.response.status;
+      if (status >= 200 && status < 300) {
+        networkStats.success++;
+      } else if (status >= 300 && status < 400) {
+        networkStats.warning++;
+      } else {
+        networkStats.error++;
+      }
+      updateNetworkStats();
+    }
     
     try {
       // 获取响应体
@@ -1055,6 +1316,16 @@
     setupCopyButtons();
     initStorageTab();
     
+    // 初始化搜索历史
+    loadSearchHistory();
+    updateSearchHistoryDisplay();
+    
+    // 启动实时更新
+    startRealTimeUpdates();
+    
+    // 添加键盘快捷键支持
+    setupKeyboardShortcuts();
+    
     // 初始化highlight.js
     if (typeof hljs !== 'undefined') {
       // 本地版本的highlight.js已包含所需语言，无需额外配置
@@ -1062,6 +1333,42 @@
     }
     
     console.log('AES DevTools已启动，支持网络监控和储存管理');
+  }
+  
+  // 启动实时更新
+  function startRealTimeUpdates() {
+    // 每秒更新一次统计信息
+    setInterval(() => {
+      updateNetworkStats();
+    }, 1000);
+    
+    // 每5秒检查一次是否有新的请求需要更新显示
+    setInterval(() => {
+      if (!isPaused && allRecords.length > 0) {
+        // 检查是否有待处理的请求状态变化
+        let hasUpdates = false;
+        allRecords.forEach(record => {
+          if (record.isEarlyCapture && !record.isCompleted) {
+            // 检查是否已经超时（超过30秒）
+            const startTime = new Date(record.startedDateTime).getTime();
+            if (Date.now() - startTime > 30000) {
+              record.isCompleted = true;
+              record.response = {
+                status: 0,
+                statusText: 'Timeout',
+                headers: {},
+                body: 'Request timeout after 30 seconds'
+              };
+              hasUpdates = true;
+            }
+          }
+        });
+        
+        if (hasUpdates) {
+          applyFilter();
+        }
+      }
+    }, 5000);
   }
   
   // 设置复制按钮功能
@@ -1091,7 +1398,12 @@
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text)
         .then(() => {
-          showCopySuccess(buttonEl);
+          if (buttonEl) {
+            showCopySuccess(buttonEl);
+          } else {
+            // 显示临时成功提示
+            showTemporaryCopySuccess();
+          }
         })
         .catch(err => {
           console.warn('现代剪贴板API失败，尝试备用方法:', err);
@@ -1164,6 +1476,50 @@
       buttonEl.classList.remove('copy-error');
       buttonEl.textContent = '📋 复制';
     }, 2000);
+  }
+
+  // 显示临时复制成功提示
+  function showTemporaryCopySuccess() {
+    // 创建临时提示元素
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--success);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px var(--shadow);
+      z-index: 10000;
+      font-size: 14px;
+      font-weight: 500;
+      animation: slideIn 0.3s ease-out;
+    `;
+    notification.textContent = '✅ 已复制到剪贴板';
+    
+    // 添加动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(notification);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease-in';
+      notification.style.transform = 'translateX(100%)';
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(notification);
+        document.head.removeChild(style);
+      }, 300);
+    }, 3000);
   }
 
   function ensurePageInstrumentation() {
@@ -1376,6 +1732,11 @@
   let selectedStorageKey = null;
   let isEditing = false;
   
+  // 值编辑器搜索相关
+  let searchMatches = [];
+  let currentMatchIndex = -1;
+  let originalTextareaValue = '';
+  
   // 初始化储存页签
   function initStorageTab() {
     wireStorageTypeSwitch();
@@ -1427,12 +1788,57 @@
     document.getElementById('formatJSON').addEventListener('click', formatJSONValue);
     document.getElementById('minifyJSON').addEventListener('click', minifyJSONValue);
     document.getElementById('validateJSON').addEventListener('click', validateJSONValue);
+    
+    // 值编辑器搜索功能
+    wireValueEditorSearch();
   }
   
   // 储存搜索
   function wireStorageSearch() {
     const searchInput = document.getElementById('storageFilter');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const searchHelp = document.getElementById('searchHelp');
+    const searchHelpModal = document.getElementById('searchHelpModal');
+    const closeSearchHelp = document.getElementById('closeSearchHelp');
+    
+    // 搜索输入事件
     searchInput.addEventListener('input', filterStorageData);
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        filterStorageData();
+      } else if (e.key === 'Escape') {
+        clearSearch();
+      }
+    });
+    
+    // 搜索选项变化事件
+    document.querySelectorAll('input[name="searchMode"]').forEach(radio => {
+      radio.addEventListener('change', filterStorageData);
+    });
+    
+    document.getElementById('searchKeys').addEventListener('change', filterStorageData);
+    document.getElementById('searchValues').addEventListener('change', filterStorageData);
+    document.getElementById('dataTypeFilter').addEventListener('change', filterStorageData);
+    document.getElementById('caseSensitive').addEventListener('change', filterStorageData);
+    
+    // 清除搜索按钮
+    clearSearchBtn.addEventListener('click', clearSearch);
+    
+    // 搜索帮助
+    searchHelp.addEventListener('click', () => {
+      searchHelpModal.classList.add('show');
+    });
+    
+    closeSearchHelp.addEventListener('click', () => {
+      searchHelpModal.classList.remove('show');
+    });
+    
+    // 点击模态框外部关闭
+    searchHelpModal.addEventListener('click', (e) => {
+      if (e.target === searchHelpModal) {
+        searchHelpModal.classList.remove('show');
+      }
+    });
   }
   
   // 刷新储存数据
@@ -1455,24 +1861,150 @@
     chrome.devtools.inspectedWindow.eval(code, (result) => {
       storageData = result || [];
       filterStorageData();
-      renderStorageTable();
     });
   }
   
   // 过滤储存数据
   function filterStorageData() {
-    const searchText = document.getElementById('storageFilter').value.toLowerCase();
+    const searchText = document.getElementById('storageFilter').value;
+    const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
+    const searchKeys = document.getElementById('searchKeys').checked;
+    const searchValues = document.getElementById('searchValues').checked;
+    const dataTypeFilter = document.getElementById('dataTypeFilter').value;
+    const caseSensitive = document.getElementById('caseSensitive').checked;
     
-    if (!searchText) {
-      filteredStorageData = [...storageData];
-    } else {
-      filteredStorageData = storageData.filter(item => 
-        item.key.toLowerCase().includes(searchText) || 
-        item.value.toLowerCase().includes(searchText)
-      );
+    // 首先按数据类型过滤
+    let typeFilteredData = storageData;
+    if (dataTypeFilter) {
+      typeFilteredData = storageData.filter(item => {
+        const dataType = detectDataType(item.value);
+        return dataType === dataTypeFilter;
+      });
     }
     
+    // 如果没有搜索文本，只应用类型过滤
+    if (!searchText.trim()) {
+      filteredStorageData = [...typeFilteredData];
+      updateSearchStats();
+      renderStorageTable();
+      return;
+    }
+    
+    // 应用搜索文本过滤
+    filteredStorageData = typeFilteredData.filter(item => {
+      try {
+        return searchInItem(item, searchText, searchMode, searchKeys, searchValues, caseSensitive);
+      } catch (e) {
+        // 正则表达式错误等，跳过该项
+        return false;
+      }
+    });
+    
+    updateSearchStats();
     renderStorageTable();
+  }
+  
+  // 检测数据类型
+  function detectDataType(value) {
+    if (!value || value === '') return 'empty';
+    
+    // 尝试解析为JSON
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return 'json';
+      } else if (typeof parsed === 'boolean') {
+        return 'boolean';
+      } else if (typeof parsed === 'number') {
+        return 'number';
+      }
+    } catch (e) {
+      // 不是有效JSON
+    }
+    
+    // 检查是否为纯数字
+    if (!isNaN(value) && !isNaN(parseFloat(value))) {
+      return 'number';
+    }
+    
+    // 检查是否为布尔值
+    if (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') {
+      return 'boolean';
+    }
+    
+    return 'string';
+  }
+  
+  // 在单个项目中搜索
+  function searchInItem(item, searchText, searchMode, searchKeys, searchValues, caseSensitive) {
+    const targets = [];
+    
+    if (searchKeys) targets.push(item.key);
+    if (searchValues) targets.push(item.value);
+    
+    if (targets.length === 0) return false;
+    
+    for (const target of targets) {
+      if (matchText(target, searchText, searchMode, caseSensitive)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  // 文本匹配
+  function matchText(text, searchText, searchMode, caseSensitive) {
+    const textToSearch = caseSensitive ? text : text.toLowerCase();
+    const searchTerm = caseSensitive ? searchText : searchText.toLowerCase();
+    
+    switch (searchMode) {
+      case 'exact':
+        return textToSearch === searchTerm;
+      
+      case 'regex':
+        try {
+          const flags = caseSensitive ? 'g' : 'gi';
+          const regex = new RegExp(searchText, flags);
+          return regex.test(text);
+        } catch (e) {
+          // 无效正则表达式
+          return false;
+        }
+      
+      case 'contains':
+      default:
+        return textToSearch.includes(searchTerm);
+    }
+  }
+  
+  // 更新搜索统计
+  function updateSearchStats() {
+    const totalCount = document.getElementById('totalCount');
+    const searchStats = document.getElementById('searchStats');
+    
+    const filtered = filteredStorageData.length;
+    const total = storageData.length;
+    
+    totalCount.textContent = total;
+    
+    if (filtered !== total) {
+      searchStats.innerHTML = `显示 <span style="color: var(--accent); font-weight: 600;">${filtered}</span> / ${total} 项`;
+    } else {
+      searchStats.innerHTML = `共 <span id="totalCount">${total}</span> 项`;
+    }
+  }
+  
+  // 清除搜索
+  function clearSearch() {
+    document.getElementById('storageFilter').value = '';
+    document.querySelector('input[name="searchMode"][value="contains"]').checked = true;
+    document.getElementById('searchKeys').checked = true;
+    document.getElementById('searchValues').checked = true;
+    document.getElementById('dataTypeFilter').value = '';
+    document.getElementById('caseSensitive').checked = false;
+    
+    filterStorageData();
   }
   
   // 渲染储存表格
@@ -1481,16 +2013,22 @@
     tbody.innerHTML = '';
     
     if (filteredStorageData.length === 0) {
+      const searchText = document.getElementById('storageFilter').value;
+      const emptyMessage = searchText ? '没有找到匹配的储存数据' : '没有找到储存数据';
       tbody.innerHTML = `
         <tr>
           <td colspan="3" class="empty-state">
-            <div class="icon">📦</div>
-            <div>没有找到储存数据</div>
+            <div class="icon">${searchText ? '🔍' : '📦'}</div>
+            <div>${emptyMessage}</div>
           </td>
         </tr>
       `;
       return;
     }
+    
+    const searchText = document.getElementById('storageFilter').value;
+    const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
+    const caseSensitive = document.getElementById('caseSensitive').checked;
     
     filteredStorageData.forEach((item, index) => {
       const tr = document.createElement('tr');
@@ -1502,20 +2040,31 @@
       
       // 处理值显示
       let displayValue = item.value;
-      let valueType = 'text';
+      let valueType = detectDataType(item.value);
       
-      try {
-        JSON.parse(item.value);
-        valueType = 'json';
-        displayValue = item.value.length > 100 ? item.value.substring(0, 100) + '...' : item.value;
-      } catch (e) {
-        displayValue = item.value.length > 100 ? item.value.substring(0, 100) + '...' : item.value;
+      // 截断长值
+      if (displayValue.length > 100) {
+        displayValue = displayValue.substring(0, 100) + '...';
+      }
+      
+      // 应用搜索高亮
+      const highlightedKey = highlightSearchText(item.key, searchText, searchMode, caseSensitive);
+      const highlightedValue = highlightSearchText(displayValue, searchText, searchMode, caseSensitive);
+      
+      // 选择合适的图标
+      let typeIcon = '';
+      switch (valueType) {
+        case 'json': typeIcon = '<span style="color: var(--accent);">🧩</span> '; break;
+        case 'number': typeIcon = '<span style="color: var(--info);">🔢</span> '; break;
+        case 'boolean': typeIcon = '<span style="color: var(--warning);">✓</span> '; break;
+        case 'empty': typeIcon = '<span style="color: var(--muted);">∅</span> '; break;
+        default: typeIcon = '';
       }
       
       tr.innerHTML = `
-        <td title="${escapeHtml(item.key)}">${escapeHtml(item.key)}</td>
+        <td title="${escapeHtml(item.key)}">${highlightedKey}</td>
         <td class="storage-value" title="${escapeHtml(item.value)}">
-          ${valueType === 'json' ? '<span style="color: var(--accent);">🧩</span> ' : ''}${escapeHtml(displayValue)}
+          ${typeIcon}${highlightedValue}
         </td>
         <td class="storage-actions-cell">
           <button class="edit-btn" data-key="${escapeHtml(item.key)}">✏️ 编辑</button>
@@ -1532,6 +2081,51 @@
     
     // 绑定操作按钮事件
     bindStorageActionButtons();
+  }
+  
+  // 高亮搜索文本
+  function highlightSearchText(text, searchText, searchMode, caseSensitive) {
+    if (!searchText.trim()) return escapeHtml(text);
+    
+    try {
+      let highlightedText = escapeHtml(text);
+      
+      switch (searchMode) {
+        case 'exact':
+          if (caseSensitive) {
+            if (text === searchText) {
+              highlightedText = `<span class="search-highlight">${escapeHtml(text)}</span>`;
+            }
+          } else {
+            if (text.toLowerCase() === searchText.toLowerCase()) {
+              highlightedText = `<span class="search-highlight">${escapeHtml(text)}</span>`;
+            }
+          }
+          break;
+          
+        case 'regex':
+          try {
+            const flags = caseSensitive ? 'gi' : 'gi';
+            const regex = new RegExp(`(${searchText})`, flags);
+            highlightedText = escapeHtml(text).replace(regex, '<span class="search-highlight">$1</span>');
+          } catch (e) {
+            // 无效正则表达式，返回原文本
+          }
+          break;
+          
+        case 'contains':
+        default:
+          const flags = caseSensitive ? 'g' : 'gi';
+          const escapedSearchText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(${escapedSearchText})`, flags);
+          highlightedText = escapeHtml(text).replace(regex, '<span class="search-highlight">$1</span>');
+          break;
+      }
+      
+      return highlightedText;
+    } catch (e) {
+      return escapeHtml(text);
+    }
   }
   
   // 绑定储存操作按钮
@@ -1592,6 +2186,15 @@
     }
     
     isEditing = true;
+    
+    // 显示编辑器
+    document.querySelector('.storage-editor').style.display = 'block';
+    
+    // 清除搜索状态
+    clearValueSearch();
+    
+    // 保存原始值用于搜索
+    originalTextareaValue = document.getElementById('editValue').value;
   }
   
   // 添加新储存项
@@ -1607,6 +2210,12 @@
     });
     
     isEditing = false;
+    
+    // 显示编辑器
+    document.querySelector('.storage-editor').style.display = 'block';
+    
+    // 清除搜索状态
+    clearValueSearch();
     
     // 聚焦到键名输入框
     document.getElementById('editKey').focus();
@@ -1659,6 +2268,9 @@
     document.getElementById('editorTitle').textContent = '编辑存储项';
     selectedStorageKey = null;
     isEditing = false;
+    
+    // 清除搜索状态
+    clearValueSearch();
     
     // 清除表格选中状态
     document.querySelectorAll('#storageRows tr').forEach(tr => {
@@ -1856,8 +2468,464 @@
     }
   }
 
+  // 更新网络统计显示
+  function updateNetworkStats() {
+    const statsContainer = document.getElementById('networkStats');
+    if (!statsContainer) return;
+    
+    const uptime = Math.floor((Date.now() - networkStats.startTime) / 1000);
+    const uptimeStr = uptime > 3600 ? 
+      `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m` :
+      uptime > 60 ? `${Math.floor(uptime / 60)}m ${uptime % 60}s` : `${uptime}s`;
+    
+    statsContainer.innerHTML = `
+      <div class="stat-item">
+        <span class="stat-label">总计:</span>
+        <span class="stat-value">${networkStats.total}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">成功:</span>
+        <span class="stat-value success">${networkStats.success}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">重定向:</span>
+        <span class="stat-value warning">${networkStats.warning}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">错误:</span>
+        <span class="stat-value error">${networkStats.error}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">待处理:</span>
+        <span class="stat-value pending">${networkStats.pending}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">运行时间:</span>
+        <span class="stat-value">${uptimeStr}</span>
+      </div>
+    `;
+  }
+
+  // 右键菜单功能
+  let contextMenuTarget = null;
+  
+  function initContextMenu() {
+    const contextMenu = document.getElementById('contextMenu');
+    if (!contextMenu) return;
+    
+    // 隐藏右键菜单
+    function hideContextMenu() {
+      contextMenu.classList.remove('show');
+      contextMenuTarget = null;
+    }
+    
+    // 显示右键菜单
+    function showContextMenu(e, record) {
+      e.preventDefault();
+      contextMenuTarget = record;
+      
+      const rect = e.target.getBoundingClientRect();
+      contextMenu.style.left = e.clientX + 'px';
+      contextMenu.style.top = e.clientY + 'px';
+      
+      contextMenu.classList.add('show');
+    }
+    
+    // 处理右键菜单项点击
+    contextMenu.addEventListener('click', (e) => {
+      const menuItem = e.target.closest('.context-menu-item');
+      if (!menuItem || !contextMenuTarget) return;
+      
+      const action = menuItem.dataset.action;
+      handleContextMenuAction(action, contextMenuTarget);
+      hideContextMenu();
+    });
+    
+    // 点击外部隐藏菜单
+    document.addEventListener('click', hideContextMenu);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideContextMenu();
+    });
+    
+    // 为表格行添加右键菜单
+    document.addEventListener('contextmenu', (e) => {
+      const tableRow = e.target.closest('#rows tr');
+      if (tableRow) {
+        const recordId = tableRow.dataset.id;
+        const record = allRecords.find(r => r.id === recordId);
+        if (record) {
+          showContextMenu(e, record);
+        }
+      }
+    });
+  }
+  
+  // 处理右键菜单操作
+  function handleContextMenuAction(action, record) {
+    switch (action) {
+      case 'copy-url':
+        copyTextToClipboard(record.request.url, null);
+        break;
+        
+      case 'copy-request':
+        const requestInfo = {
+          method: record.request.method,
+          url: record.request.url,
+          headers: record.request.headers,
+          body: record.request.body
+        };
+        copyTextToClipboard(JSON.stringify(requestInfo, null, 2), null);
+        break;
+        
+      case 'copy-response':
+        const responseInfo = {
+          status: record.response?.status,
+          headers: record.response?.headers,
+          body: record.response?.body
+        };
+        copyTextToClipboard(JSON.stringify(responseInfo, null, 2), null);
+        break;
+        
+      case 'open-in-tab':
+        chrome.tabs.create({ url: record.request.url });
+        break;
+        
+      case 'block-domain':
+        const domain = new URL(record.request.url).hostname;
+        if (confirm(`确定要阻止域名 "${domain}" 的请求吗？`)) {
+          // 这里可以实现域名阻止功能
+          console.log('阻止域名:', domain);
+        }
+        break;
+        
+      case 'export-single':
+        const exportData = {
+          record: record,
+          exportInfo: {
+            timestamp: new Date().toISOString(),
+            type: 'single-request'
+          }
+        };
+        const data = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `request-${record.id}-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        break;
+    }
+  }
+
   init();
   initTheme();
+  wireSearchHistory();
+  initContextMenu();
+  setupKeyboardShortcuts();
+  setupHelpSystem();
+
+  // 设置键盘快捷键
+  function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // 检查是否在输入框中
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+      
+      // Ctrl/Cmd + 快捷键
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'f':
+            e.preventDefault();
+            filterEl.focus();
+            break;
+          case 'k':
+            e.preventDefault();
+            filterEl.focus();
+            break;
+          case 'r':
+            e.preventDefault();
+            refreshStorageData();
+            break;
+          case 's':
+            e.preventDefault();
+            if (isEditing) {
+              saveStorageItem();
+            }
+            break;
+          case 'e':
+            e.preventDefault();
+            exportEl.click();
+            break;
+          case 'd':
+            e.preventDefault();
+            if (enableAESDecryptEl.checked) {
+              applyAESDecryptEl.click();
+            }
+            break;
+        }
+      }
+      
+      // 其他快捷键
+      switch (e.key) {
+        case 'Escape':
+          // 清除搜索
+          if (filterEl.value) {
+            filterEl.value = '';
+            applyFilter();
+          }
+          break;
+        case ' ':
+          e.preventDefault();
+          toggleEl.click();
+          break;
+        case 'Delete':
+          if (selectedStorageKey) {
+            deleteStorageItem(selectedStorageKey);
+          }
+          break;
+        case 'Enter':
+          if (isEditing) {
+            saveStorageItem();
+          }
+          break;
+      }
+    });
+  }
+
+  // 帮助系统设置
+  function setupHelpSystem() {
+    // 帮助按钮功能
+    document.getElementById('showHelp').addEventListener('click', () => {
+      const helpModal = document.getElementById('helpModal');
+      helpModal.classList.add('show');
+    });
+
+    // 关闭帮助模态框
+    document.getElementById('closeHelp').addEventListener('click', () => {
+      const helpModal = document.getElementById('helpModal');
+      helpModal.classList.remove('show');
+    });
+
+    // 点击模态框外部关闭
+    document.getElementById('helpModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        e.target.classList.remove('show');
+      }
+    });
+  }
+  
+  // 值编辑器搜索功能
+  function wireValueEditorSearch() {
+    const valueSearch = document.getElementById('valueSearch');
+    const prevMatch = document.getElementById('prevMatch');
+    const nextMatch = document.getElementById('nextMatch');
+    const editValue = document.getElementById('editValue');
+    
+    // 初始状态下禁用按钮
+    prevMatch.disabled = true;
+    nextMatch.disabled = true;
+    
+    // 搜索输入事件
+    valueSearch.addEventListener('input', performValueSearch);
+    valueSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (e.shiftKey) {
+          goToPrevMatch();
+        } else {
+          goToNextMatch();
+        }
+        e.preventDefault();
+      } else if (e.key === 'Escape') {
+        clearValueSearch();
+      }
+    });
+    
+    // 上一个/下一个匹配按钮
+    prevMatch.addEventListener('click', goToPrevMatch);
+    nextMatch.addEventListener('click', goToNextMatch);
+    
+    // 保存原始值用于搜索
+    editValue.addEventListener('input', () => {
+      if (!originalTextareaValue) {
+        originalTextareaValue = editValue.value;
+      }
+    });
+  }
+  
+  // 执行值搜索
+  function performValueSearch() {
+    const searchText = document.getElementById('valueSearch').value.trim();
+    const editValue = document.getElementById('editValue');
+    const textareaValue = editValue.value;
+    const prevMatch = document.getElementById('prevMatch');
+    const nextMatch = document.getElementById('nextMatch');
+    
+    if (!searchText) {
+      clearValueSearch();
+      return;
+    }
+    
+    // 查找所有匹配项
+    searchMatches = [];
+    const regex = new RegExp(escapeRegExp(searchText), 'gi');
+    let match;
+    
+    while ((match = regex.exec(textareaValue)) !== null) {
+      searchMatches.push({
+        index: match.index,
+        text: match[0],
+        length: match[0].length
+      });
+    }
+    
+    // 更新匹配计数
+    updateMatchCount();
+    
+    // 更新按钮状态
+    prevMatch.disabled = searchMatches.length === 0;
+    nextMatch.disabled = searchMatches.length === 0;
+    
+    // 高亮所有匹配项
+    highlightMatches();
+    
+    // 如果有匹配项，跳转到第一个
+    if (searchMatches.length > 0) {
+      currentMatchIndex = 0;
+      goToMatch(0);
+    } else {
+      currentMatchIndex = -1;
+    }
+  }
+  
+  // 跳转到下一个匹配
+  function goToNextMatch() {
+    if (searchMatches.length === 0) return;
+    
+    currentMatchIndex = (currentMatchIndex + 1) % searchMatches.length;
+    goToMatch(currentMatchIndex);
+  }
+  
+  // 跳转到上一个匹配
+  function goToPrevMatch() {
+    if (searchMatches.length === 0) return;
+    
+    currentMatchIndex = currentMatchIndex <= 0 ? searchMatches.length - 1 : currentMatchIndex - 1;
+    goToMatch(currentMatchIndex);
+  }
+  
+  // 跳转到指定匹配
+  function goToMatch(index) {
+    if (index < 0 || index >= searchMatches.length) return;
+    
+    const editValue = document.getElementById('editValue');
+    const match = searchMatches[index];
+    
+    // 设置光标位置
+    editValue.setSelectionRange(match.index, match.index + match.length);
+    editValue.focus();
+    
+    // 更新当前匹配高亮
+    updateCurrentMatchHighlight();
+  }
+  
+  // 高亮所有匹配项
+  function highlightMatches() {
+    const editValue = document.getElementById('editValue');
+    const searchText = document.getElementById('valueSearch').value.trim();
+    
+    if (!searchText) return;
+    
+    // 创建高亮后的HTML
+    const textareaValue = editValue.value;
+    const regex = new RegExp(escapeRegExp(searchText), 'gi');
+    const highlightedValue = textareaValue.replace(regex, (match) => {
+      return `<span class="search-highlight">${match}</span>`;
+    });
+    
+    // 创建临时div来显示高亮
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = highlightedValue;
+    tempDiv.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: auto;
+      pointer-events: none;
+      z-index: 1;
+    `;
+    
+    // 移除之前的高亮显示
+    const existingHighlight = editValue.parentNode.querySelector('.value-highlight-overlay');
+    if (existingHighlight) {
+      existingHighlight.remove();
+    }
+    
+    // 添加新的高亮显示
+    tempDiv.className = 'value-highlight-overlay';
+    editValue.parentNode.appendChild(tempDiv);
+  }
+  
+  // 更新当前匹配高亮
+  function updateCurrentMatchHighlight() {
+    const highlights = document.querySelectorAll('.search-highlight');
+    highlights.forEach((highlight, index) => {
+      highlight.classList.remove('current');
+      if (index === currentMatchIndex) {
+        highlight.classList.add('current');
+      }
+    });
+  }
+  
+  // 更新匹配计数
+  function updateMatchCount() {
+    const matchCount = document.getElementById('matchCount');
+    if (searchMatches.length > 0) {
+      matchCount.textContent = `${currentMatchIndex + 1}/${searchMatches.length}`;
+    } else {
+      matchCount.textContent = '0/0';
+    }
+  }
+  
+  // 清除值搜索
+  function clearValueSearch() {
+    const valueSearch = document.getElementById('valueSearch');
+    const matchCount = document.getElementById('matchCount');
+    const prevMatch = document.getElementById('prevMatch');
+    const nextMatch = document.getElementById('nextMatch');
+    
+    valueSearch.value = '';
+    searchMatches = [];
+    currentMatchIndex = -1;
+    matchCount.textContent = '0/0';
+    
+    // 清除高亮显示
+    const existingHighlight = document.querySelector('.value-highlight-overlay');
+    if (existingHighlight) {
+      existingHighlight.remove();
+    }
+    
+    // 重置按钮状态
+    prevMatch.disabled = true;
+    nextMatch.disabled = true;
+  }
+  
+  // 转义正则表达式特殊字符
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
 })();
 
 

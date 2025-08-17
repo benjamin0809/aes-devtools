@@ -61,7 +61,7 @@
       }
       .toolbar {
         display: flex;
-        gap: 8px;
+        gap: 6px;
         align-items: center;
         padding: 8px 12px;
         background: var(--panel);
@@ -70,7 +70,32 @@
         position: relative;
         z-index: 10;
         flex-wrap: nowrap;
-        overflow-x: auto;
+        overflow-x: hidden;
+        min-height: 48px;
+      }
+      
+      .toolbar > * {
+        flex-shrink: 0;
+      }
+      
+      .toolbar input[type="text"] {
+        min-width: 200px;
+        max-width: 300px;
+      }
+      
+      .toolbar select {
+        min-width: 80px;
+      }
+      
+      .toolbar label {
+        white-space: nowrap;
+        margin: 0;
+      }
+      
+      .toolbar button {
+        white-space: nowrap;
+        padding: 6px 8px;
+        font-size: 12px;
       }
       
       /* 主题切换按钮 */
@@ -807,23 +832,229 @@
       .storage-search {
         padding: 12px;
         border-bottom: 1px solid var(--border);
+        background: var(--bg-secondary);
       }
       
-      .storage-search input {
+      .search-input-group {
+        position: relative;
+        margin-bottom: 10px;
+      }
+      
+      .search-input-group input {
         width: 100%;
-        background: var(--bg-secondary);
+        background: var(--panel);
         color: var(--text);
         border: 1px solid var(--border);
-        padding: 8px 12px;
+        padding: 8px 35px 8px 12px;
         border-radius: 6px;
         font-size: 13px;
         transition: var(--transition);
       }
       
-      .storage-search input:focus {
+      .search-input-group input:focus {
         outline: none;
         border-color: var(--accent);
         box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+      }
+      
+      .clear-search-btn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 3px;
+        font-size: 12px;
+        line-height: 1;
+        transition: var(--transition);
+      }
+      
+      .clear-search-btn:hover {
+        background: var(--panel-hover);
+        color: var(--danger);
+      }
+      
+      .search-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      
+      .search-mode,
+      .search-scope,
+      .search-filters {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      
+      .search-option {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--text);
+        transition: var(--transition);
+      }
+      
+      .search-option:hover {
+        color: var(--accent);
+      }
+      
+      .search-option input[type="radio"],
+      .search-option input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+      
+      .search-filters select {
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: var(--transition);
+      }
+      
+      .search-filters select:hover {
+        border-color: var(--accent);
+      }
+      
+      .search-stats {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+        color: var(--muted);
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+      }
+      
+      .help-btn {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 2px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10px;
+        transition: var(--transition);
+      }
+      
+      .help-btn:hover {
+        background: var(--panel-hover);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      
+      /* 搜索结果高亮 */
+      .search-highlight {
+        background: rgba(255, 255, 0, 0.3);
+        color: var(--text);
+        font-weight: 600;
+        padding: 1px 2px;
+        border-radius: 2px;
+      }
+      
+      [data-theme="dark"] .search-highlight {
+        background: rgba(255, 255, 0, 0.2);
+        color: var(--accent-light);
+      }
+      
+      /* 搜索帮助模态框 */
+      .search-help-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      
+      .search-help-modal.show {
+        display: flex;
+      }
+      
+      .search-help-content {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 500px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 8px 24px var(--shadow);
+      }
+      
+      .search-help-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .search-help-header h3 {
+        margin: 0;
+        color: var(--text);
+        font-size: 16px;
+      }
+      
+      .search-help-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 18px;
+        padding: 4px;
+        transition: var(--transition);
+      }
+      
+      .search-help-close:hover {
+        color: var(--danger);
+      }
+      
+      .search-help-section {
+        margin-bottom: 16px;
+      }
+      
+      .search-help-section h4 {
+        color: var(--accent);
+        font-size: 14px;
+        margin: 0 0 8px 0;
+      }
+      
+      .search-help-section p,
+      .search-help-section li {
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 4px 0;
+      }
+      
+      .search-help-section code {
+        background: var(--bg-secondary);
+        color: var(--accent);
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 12px;
       }
       
       .storage-table {
@@ -992,6 +1223,87 @@
         padding: 8px 12px;
         border-radius: 6px;
         font-size: 13px;
+      }
+      
+      /* 值编辑器搜索功能样式 */
+      .value-editor-container {
+        position: relative;
+      }
+      
+      .value-search-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 8px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+      }
+      
+      .value-search-bar input {
+        flex: 1;
+        margin: 0;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      
+      .search-controls {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+      }
+      
+      .search-controls button {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 4px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10px;
+        transition: var(--transition);
+      }
+      
+      .search-controls button:hover {
+        background: var(--panel-hover);
+        border-color: var(--accent);
+      }
+      
+      .search-controls button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: var(--muted) !important;
+        border-color: var(--muted) !important;
+      }
+      
+      .search-controls button:not(:disabled) {
+        background: var(--panel);
+        border-color: var(--border);
+      }
+      
+      .search-controls #matchCount {
+        color: var(--muted);
+        font-size: 11px;
+        font-family: monospace;
+        min-width: 30px;
+        text-align: center;
+      }
+      
+      /* 搜索高亮样式 */
+      .search-highlight {
+        background: rgba(255, 255, 0, 0.3);
+        border-radius: 2px;
+        padding: 1px 2px;
+      }
+      
+      .search-highlight.current {
+        background: rgba(255, 255, 0, 0.6);
+        box-shadow: 0 0 0 2px rgba(255, 255, 0, 0.3);
+      }
+      
+      .form-group textarea {
         font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
         transition: var(--transition);
         resize: vertical;
@@ -1070,6 +1382,360 @@
           flex-wrap: wrap;
         }
       }
+      
+      /* 网络统计样式 */
+      .network-stats {
+        display: flex;
+        gap: 16px;
+        padding: 12px 16px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        overflow-x: auto;
+        flex-wrap: wrap;
+      }
+      
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        transition: var(--transition);
+      }
+      
+      .stat-item:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px var(--shadow);
+      }
+      
+      .stat-label {
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+      
+      .stat-value {
+        font-weight: 600;
+        color: var(--text);
+      }
+      
+      .stat-value.success {
+        color: var(--success);
+      }
+      
+      .stat-value.warning {
+        color: var(--warning);
+      }
+      
+      .stat-value.error {
+        color: var(--danger);
+      }
+      
+      .stat-value.pending {
+        color: var(--muted);
+      }
+      
+      /* 搜索历史样式 */
+      .search-history-container {
+        position: relative;
+        display: inline-block;
+      }
+      
+      .search-history-btn {
+        background: var(--bg-secondary);
+        color: var(--muted);
+        border: 1px solid var(--border);
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 12px;
+        min-width: 32px;
+      }
+      
+      .search-history-btn:hover {
+        background: var(--panel-hover);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      
+      .search-history-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px var(--shadow);
+        z-index: 1000;
+        min-width: 250px;
+        display: none;
+        margin-top: 4px;
+      }
+      
+      .search-history-dropdown.show {
+        display: block;
+      }
+      
+      .search-history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-secondary);
+        border-radius: 8px 8px 0 0;
+      }
+      
+      .search-history-header span {
+        font-weight: 600;
+        color: var(--text);
+        font-size: 12px;
+      }
+      
+      .clear-history-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        transition: var(--transition);
+      }
+      
+      .clear-history-btn:hover {
+        background: var(--panel-hover);
+        color: var(--danger);
+      }
+      
+      .search-history-list {
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      
+      .search-history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 12px;
+      }
+      
+      .search-history-item:hover {
+        background: var(--panel-hover);
+      }
+      
+      .search-history-item:last-child {
+        border-bottom: none;
+      }
+      
+      .search-history-text {
+        color: var(--text);
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-right: 8px;
+      }
+      
+      .search-history-time {
+        color: var(--muted);
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      
+      .search-history-remove {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 10px;
+        margin-left: 8px;
+        transition: var(--transition);
+      }
+      
+      .search-history-remove:hover {
+        background: var(--danger);
+        color: white;
+      }
+      
+      /* 右键菜单样式 */
+      .context-menu {
+        position: fixed;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 4px 16px var(--shadow);
+        padding: 8px 0;
+        min-width: 200px;
+        z-index: 10000;
+        display: none;
+        font-size: 13px;
+      }
+      
+      .context-menu.show {
+        display: block;
+      }
+      
+      .context-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: var(--transition);
+        color: var(--text);
+      }
+      
+      .context-menu-item:hover {
+        background: var(--panel-hover);
+        color: var(--accent);
+      }
+      
+      .context-menu-icon {
+        font-size: 14px;
+        width: 16px;
+        text-align: center;
+      }
+      
+      .context-menu-separator {
+        height: 1px;
+        background: var(--border);
+        margin: 4px 0;
+      }
+      
+      /* 帮助模态框样式 */
+      .help-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      
+      .help-modal.show {
+        display: flex;
+      }
+      
+      .help-content {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 8px 32px var(--shadow);
+      }
+      
+      .help-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--border);
+      }
+      
+      .help-header h3 {
+        margin: 0;
+        color: var(--text);
+        font-size: 18px;
+        font-weight: 600;
+      }
+      
+      .help-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 20px;
+        padding: 4px;
+        border-radius: 6px;
+        transition: var(--transition);
+      }
+      
+      .help-close:hover {
+        background: var(--panel-hover);
+        color: var(--danger);
+      }
+      
+      .help-section {
+        margin-bottom: 20px;
+      }
+      
+      .help-section h4 {
+        color: var(--accent);
+        font-size: 16px;
+        margin: 0 0 12px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .help-section p,
+      .help-section li {
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 8px 0;
+      }
+      
+      .help-section ul {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+      
+      .shortcut-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      
+      .shortcut-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background: var(--bg-secondary);
+        border-radius: 6px;
+        border: 1px solid var(--border);
+      }
+      
+      .shortcut-item kbd {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 12px;
+        color: var(--accent);
+        font-weight: 600;
+        min-width: 80px;
+        text-align: center;
+      }
+      
+      .shortcut-item span {
+        color: var(--text);
+        font-size: 13px;
+      }
     </style>
   </head>
   <body>
@@ -1086,6 +1752,16 @@
         <button id="toggle">⏸️ Pause</button>
         <button id="clear">🗑️ Clear</button>
         <input id="filter" type="text" placeholder="🔍 Filter by URL, method, status, type..." />
+        <div class="search-history-container">
+          <button id="searchHistoryBtn" class="search-history-btn" title="搜索历史">📚</button>
+          <div id="searchHistoryDropdown" class="search-history-dropdown">
+            <div class="search-history-header">
+              <span>搜索历史</span>
+              <button id="clearSearchHistory" class="clear-history-btn">🗑️</button>
+            </div>
+            <div id="searchHistoryList" class="search-history-list"></div>
+          </div>
+        </div>
         <div class="suffix-filter">
           <span class="suffix-label">📁 后缀:</span>
           <select id="suffix-mode">
@@ -1112,7 +1788,13 @@
         </label>
         <button id="applyAESDecrypt">✨ AES Apply</button>
         <button id="export">📤 Export JSON</button>
+        <button id="batchDecrypt">🔓 批量解密</button>
+        <button id="batchExport">📦 批量导出</button>
+        <button id="showHelp" title="显示帮助">❓</button>
       </div>
+      
+      <!-- 网络统计显示区域 -->
+      <div id="networkStats" class="network-stats"></div>
       <div class="split">
         <div class="left">
           <table class="table" id="table">
@@ -1161,7 +1843,54 @@
       <div class="storage-container">
         <div class="storage-list">
           <div class="storage-search">
-            <input id="storageFilter" type="text" placeholder="🔍 搜索键名或值..." />
+            <div class="search-input-group">
+              <input id="storageFilter" type="text" placeholder="🔍 搜索键名或值..." />
+              <button id="clearSearch" class="clear-search-btn" title="清除搜索">✕</button>
+            </div>
+            <div class="search-options">
+              <div class="search-mode">
+                <label class="search-option">
+                  <input type="radio" name="searchMode" value="contains" checked />
+                  <span>包含</span>
+                </label>
+                <label class="search-option">
+                  <input type="radio" name="searchMode" value="exact" />
+                  <span>精确</span>
+                </label>
+                <label class="search-option">
+                  <input type="radio" name="searchMode" value="regex" />
+                  <span>正则</span>
+                </label>
+              </div>
+              <div class="search-scope">
+                <label class="search-option">
+                  <input type="checkbox" id="searchKeys" checked />
+                  <span>键名</span>
+                </label>
+                <label class="search-option">
+                  <input type="checkbox" id="searchValues" checked />
+                  <span>值</span>
+                </label>
+              </div>
+              <div class="search-filters">
+                <select id="dataTypeFilter">
+                  <option value="">所有类型</option>
+                  <option value="json">JSON对象</option>
+                  <option value="string">字符串</option>
+                  <option value="number">数字</option>
+                  <option value="boolean">布尔值</option>
+                  <option value="empty">空值</option>
+                </select>
+                <label class="search-option">
+                  <input type="checkbox" id="caseSensitive" />
+                  <span>区分大小写</span>
+                </label>
+              </div>
+            </div>
+            <div class="search-stats">
+              <span id="searchStats">共 <span id="totalCount">0</span> 项</span>
+              <button id="searchHelp" class="help-btn" title="搜索帮助">❓</button>
+            </div>
           </div>
           <table class="storage-table" id="storageTable">
             <thead>
@@ -1189,7 +1918,17 @@
             </div>
             <div class="form-group">
               <label for="editValue">值:</label>
-              <textarea id="editValue" placeholder="输入值，支持JSON格式" rows="10"></textarea>
+              <div class="value-editor-container">
+                <div class="value-search-bar">
+                  <input type="text" id="valueSearch" placeholder="🔍 在值中搜索..." />
+                  <div class="search-controls">
+                    <button id="prevMatch" title="上一个匹配">⬆️</button>
+                    <button id="nextMatch" title="下一个匹配">⬇️</button>
+                    <span id="matchCount">0/0</span>
+                  </div>
+                </div>
+                <textarea id="editValue" placeholder="输入值，支持JSON格式" rows="10"></textarea>
+              </div>
             </div>
             <div class="editor-tools">
               <button id="formatJSON">🎨 格式化JSON</button>
@@ -1200,6 +1939,56 @@
         </div>
       </div>
     </div>
+
+    <!-- 搜索帮助模态框 -->
+    <div id="searchHelpModal" class="search-help-modal">
+      <div class="search-help-content">
+        <div class="search-help-header">
+          <h3>🔍 搜索帮助</h3>
+          <button class="search-help-close" id="closeSearchHelp">✕</button>
+        </div>
+        
+        <div class="search-help-section">
+          <h4>🎯 搜索模式</h4>
+          <p><strong>包含:</strong> 查找包含搜索词的项目（默认）</p>
+          <p><strong>精确:</strong> 完全匹配搜索词</p>
+          <p><strong>正则:</strong> 使用正则表达式进行搜索</p>
+        </div>
+        
+        <div class="search-help-section">
+          <h4>📍 搜索范围</h4>
+          <p><strong>键名:</strong> 在储存项的键名中搜索</p>
+          <p><strong>值:</strong> 在储存项的值中搜索</p>
+          <p>可以同时选择多个范围</p>
+        </div>
+        
+        <div class="search-help-section">
+          <h4>🏷️ 数据类型过滤</h4>
+          <p><strong>JSON对象:</strong> 只显示有效的JSON数据</p>
+          <p><strong>字符串:</strong> 只显示纯文本字符串</p>
+          <p><strong>数字:</strong> 只显示数字值</p>
+          <p><strong>布尔值:</strong> 只显示 true/false 值</p>
+          <p><strong>空值:</strong> 只显示空字符串或null值</p>
+        </div>
+        
+        <div class="search-help-section">
+          <h4>🔧 正则表达式示例</h4>
+          <p><code>^user</code> - 以"user"开头的键名</p>
+          <p><code>\\d+</code> - 包含数字的值</p>
+          <p><code>.*token.*</code> - 包含"token"的任意位置</p>
+          <p><code>\\b\\w{8}\\b</code> - 恰好8个字母的单词</p>
+          <p><code>{".*":".*"}</code> - JSON对象格式</p>
+        </div>
+        
+        <div class="search-help-section">
+          <h4>⚡ 快捷操作</h4>
+          <p><strong>Enter:</strong> 执行搜索</p>
+          <p><strong>Escape:</strong> 清除搜索</p>
+          <p><strong>点击清除按钮:</strong> 重置所有搜索条件</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Highlight.js本地文件 -->
     <link rel="stylesheet" href="highlight/default.min.css">
     <script src="highlight/highlight.min.js"></script>
@@ -1214,6 +2003,123 @@
     
     <!-- Main Script -->
     <script src="panel.js"></script>
+    
+    <!-- 右键菜单 -->
+    <div id="contextMenu" class="context-menu">
+      <div class="context-menu-item" data-action="copy-url">
+        <span class="context-menu-icon">🔗</span>
+        <span>复制URL</span>
+      </div>
+      <div class="context-menu-item" data-action="copy-request">
+        <span class="context-menu-icon">📋</span>
+        <span>复制请求信息</span>
+      </div>
+      <div class="context-menu-item" data-action="copy-response">
+        <span class="context-menu-icon">📄</span>
+        <span>复制响应信息</span>
+      </div>
+      <div class="context-menu-separator"></div>
+      <div class="context-menu-item" data-action="open-in-tab">
+        <span class="context-menu-icon">🌐</span>
+        <span>在新标签页中打开</span>
+      </div>
+      <div class="context-menu-item" data-action="block-domain">
+        <span class="context-menu-icon">🚫</span>
+        <span>阻止此域名</span>
+      </div>
+      <div class="context-menu-separator"></div>
+      <div class="context-menu-item" data-action="export-single">
+        <span class="context-menu-icon">📤</span>
+        <span>导出此请求</span>
+      </div>
+    </div>
+    
+    <!-- 帮助模态框 -->
+    <div id="helpModal" class="help-modal">
+      <div class="help-content">
+        <div class="help-header">
+          <h3>🚀 AES DevTools 使用帮助</h3>
+          <button class="help-close" id="closeHelp">✕</button>
+        </div>
+        
+        <div class="help-section">
+          <h4>⌨️ 键盘快捷键</h4>
+          <div class="shortcut-list">
+            <div class="shortcut-item">
+              <kbd>Ctrl/Cmd + F</kbd>
+              <span>聚焦搜索框</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl/Cmd + K</kbd>
+              <span>聚焦搜索框</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl/Cmd + R</kbd>
+              <span>刷新储存数据</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl/Cmd + S</kbd>
+              <span>保存储存项</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl/Cmd + E</kbd>
+              <span>导出数据</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl/Cmd + D</kbd>
+              <span>执行AES解密</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Space</kbd>
+              <span>暂停/恢复监控</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Escape</kbd>
+              <span>清除搜索</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Delete</kbd>
+              <span>删除选中的储存项</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="help-section">
+          <h4>🔍 搜索功能</h4>
+          <p><strong>文本搜索:</strong> 支持URL、方法、状态码、类型的模糊搜索</p>
+          <p><strong>后缀过滤:</strong> 可以包含或排除特定文件后缀的请求</p>
+          <p><strong>方法过滤:</strong> 按HTTP方法筛选请求</p>
+          <p><strong>搜索历史:</strong> 点击📚按钮查看搜索历史</p>
+        </div>
+        
+        <div class="help-section">
+          <h4>🔐 AES解密</h4>
+          <p><strong>自动解密:</strong> 启用后会自动尝试解密请求和响应</p>
+          <p><strong>手动解密:</strong> 点击"✨ AES Apply"按钮手动执行解密</p>
+          <p><strong>批量解密:</strong> 点击"🔓 批量解密"按钮批量处理</p>
+          <p><strong>密钥来源:</strong> 从页面的sessionStorage.securityObject获取</p>
+        </div>
+        
+        <div class="help-section">
+          <h4>💾 储存管理</h4>
+          <p><strong>localStorage:</strong> 管理浏览器的本地存储</p>
+          <p><strong>sessionStorage:</strong> 管理会话存储</p>
+          <p><strong>搜索过滤:</strong> 支持多种搜索模式和数据类型过滤</p>
+          <p><strong>导入导出:</strong> 支持JSON格式的数据导入导出</p>
+        </div>
+        
+        <div class="help-section">
+          <h4>🖱️ 右键菜单</h4>
+          <p>在网络请求上右键点击可以：</p>
+          <ul>
+            <li>复制URL、请求信息、响应信息</li>
+            <li>在新标签页中打开URL</li>
+            <li>阻止特定域名</li>
+            <li>导出单个请求</li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </body>
   
 </html>
