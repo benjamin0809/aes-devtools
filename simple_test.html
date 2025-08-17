@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AES DevTools 简单测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #42b883;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #369870;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #e9ecef;
+            border-left: 4px solid #42b883;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+    </style>
+</head>
+<body>
+    <h1>AES DevTools 简单测试</h1>
+    
+    <div class="test-section">
+        <h2>扩展状态检查</h2>
+        <button class="test-button" onclick="checkExtensionStatus()">检查扩展状态</button>
+        <div id="extension-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>基本功能测试</h2>
+        <button class="test-button" onclick="testBasicFunctions()">测试基本功能</button>
+        <div id="basic-test-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>存储测试</h2>
+        <button class="test-button" onclick="testStorage()">测试存储功能</button>
+        <div id="storage-test-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>网络请求测试</h2>
+        <button class="test-button" onclick="testNetwork()">发送测试请求</button>
+        <div id="network-test-results"></div>
+    </div>
+
+    <script>
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            element.appendChild(statusDiv);
+            
+            // 限制显示的数量
+            if (element.children.length > 5) {
+                element.removeChild(element.firstChild);
+            }
+        }
+        
+        function checkExtensionStatus() {
+            const statusDiv = document.getElementById('extension-status');
+            statusDiv.innerHTML = '';
+            
+            // 检查Chrome API
+            if (typeof chrome !== 'undefined') {
+                showStatus('extension-status', '✅ Chrome API 可用', 'success');
+                
+                if (chrome.devtools) {
+                    showStatus('extension-status', '✅ DevTools API 可用', 'success');
+                    
+                    if (chrome.devtools.network) {
+                        showStatus('extension-status', '✅ 网络API 可用', 'success');
+                    } else {
+                        showStatus('extension-status', '⚠️ 网络API 不可用', 'error');
+                    }
+                    
+                    if (chrome.devtools.inspectedWindow) {
+                        showStatus('extension-status', '✅ 检查窗口API 可用', 'success');
+                    } else {
+                        showStatus('extension-status', '⚠️ 检查窗口API 不可用', 'error');
+                    }
+                } else {
+                    showStatus('extension-status', '❌ DevTools API 不可用', 'error');
+                }
+            } else {
+                showStatus('extension-status', '❌ Chrome API 不可用', 'error');
+            }
+            
+            // 检查扩展模块
+            if (typeof UIManager === 'function') {
+                showStatus('extension-status', '✅ UIManager 模块已加载', 'success');
+            } else {
+                showStatus('extension-status', '❌ UIManager 模块未加载', 'error');
+            }
+            
+            if (typeof NetworkManager === 'function') {
+                showStatus('extension-status', '✅ NetworkManager 模块已加载', 'success');
+            } else {
+                showStatus('extension-status', '❌ NetworkManager 模块未加载', 'error');
+            }
+            
+            if (typeof StorageManager === 'function') {
+                showStatus('extension-status', '✅ StorageManager 模块已加载', 'success');
+            } else {
+                showStatus('extension-status', '❌ StorageManager 模块未加载', 'error');
+            }
+        }
+        
+        function testBasicFunctions() {
+            const resultsDiv = document.getElementById('basic-test-results');
+            resultsDiv.innerHTML = '';
+            
+            // 测试主题功能
+            if (typeof loadTheme === 'function') {
+                showStatus('basic-test-results', '✅ 主题功能可用', 'success');
+            } else {
+                showStatus('basic-test-results', '❌ 主题功能不可用', 'error');
+            }
+            
+            // 测试工具函数
+            if (typeof formatTime === 'function') {
+                showStatus('basic-test-results', '✅ 时间格式化功能可用', 'success');
+            } else {
+                showStatus('basic-test-results', '❌ 时间格式化功能不可用', 'error');
+            }
+            
+            if (typeof copyTextToClipboard === 'function') {
+                showStatus('basic-test-results', '✅ 复制功能可用', 'success');
+            } else {
+                showStatus('basic-test-results', '❌ 复制功能不可用', 'error');
+            }
+            
+            // 测试AES功能
+            if (typeof decryptAES === 'function') {
+                showStatus('basic-test-results', '✅ AES解密功能可用', 'success');
+            } else {
+                showStatus('basic-test-results', '❌ AES解密功能不可用', 'error');
+            }
+        }
+        
+        function testStorage() {
+            const resultsDiv = document.getElementById('storage-test-results');
+            resultsDiv.innerHTML = '';
+            
+            try {
+                // 测试localStorage
+                localStorage.setItem('test-key', 'test-value');
+                const value = localStorage.getItem('test-key');
+                if (value === 'test-value') {
+                    showStatus('storage-test-results', '✅ localStorage 工作正常', 'success');
+                } else {
+                    showStatus('storage-test-results', '❌ localStorage 工作异常', 'error');
+                }
+                
+                // 测试sessionStorage
+                sessionStorage.setItem('test-session', 'test-session-value');
+                const sessionValue = sessionStorage.getItem('test-session');
+                if (sessionValue === 'test-session-value') {
+                    showStatus('storage-test-results', '✅ sessionStorage 工作正常', 'success');
+                } else {
+                    showStatus('storage-test-results', '❌ sessionStorage 工作异常', 'error');
+                }
+                
+                // 清理测试数据
+                localStorage.removeItem('test-key');
+                sessionStorage.removeItem('test-session');
+                
+            } catch (error) {
+                showStatus('storage-test-results', `❌ 存储测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testNetwork() {
+            const resultsDiv = document.getElementById('network-test-results');
+            resultsDiv.innerHTML = '';
+            
+            showStatus('network-test-results', '📡 发送测试请求中...', 'info');
+            
+            // 发送一个简单的GET请求
+            fetch('https://httpbin.org/get')
+                .then(response => response.json())
+                .then(data => {
+                    showStatus('network-test-results', '✅ 网络请求成功', 'success');
+                    showStatus('network-test-results', `📊 响应状态: ${data.url}`, 'info');
+                })
+                .catch(error => {
+                    showStatus('network-test-results', `❌ 网络请求失败: ${error.message}`, 'error');
+                });
+        }
+        
+        // 页面加载完成后显示说明
+        window.addEventListener('load', () => {
+            showStatus('extension-status', '🔍 请点击"检查扩展状态"按钮开始测试', 'info');
+            showStatus('basic-test-results', '🔍 请点击"测试基本功能"按钮开始测试', 'info');
+            showStatus('storage-test-results', '🔍 请点击"测试存储功能"按钮开始测试', 'info');
+            showStatus('network-test-results', '🔍 请点击"发送测试请求"按钮开始测试', 'info');
+        });
+    </script>
+</body>
+</html> 

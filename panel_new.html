@@ -1,0 +1,212 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AES DevTools</title>
+    <link rel="stylesheet" href="styles/themes.css">
+    <link rel="stylesheet" href="styles/main.css">
+  </head>
+  <body>
+    <!-- 顶级页签导航 -->
+    <div class="main-tabs">
+      <button data-main-tab="network" class="main-tab active">🌐 Network</button>
+      <button data-main-tab="storage" class="main-tab">💾 储存</button>
+      <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
+    </div>
+
+    <!-- Network 页签内容 -->
+    <div id="network-content" class="main-content active">
+      <div class="toolbar">
+        <button id="toggle">⏸️ Pause</button>
+        <button id="clear">🗑️ Clear</button>
+        <input id="filter" type="text" placeholder="🔍 Filter by URL, method, status, type..." />
+        <div class="search-history-container">
+          <button id="searchHistoryBtn" class="search-history-btn" title="搜索历史">📚</button>
+          <div id="searchHistoryDropdown" class="search-history-dropdown">
+            <div class="search-history-header">
+              <span>搜索历史</span>
+              <button id="clearSearchHistory" class="clear-history-btn">🗑️</button>
+            </div>
+            <div id="searchHistoryList" class="search-history-list"></div>
+          </div>
+        </div>
+        <div class="suffix-filter">
+          <span class="suffix-label">📁 后缀:</span>
+          <select id="suffix-mode">
+            <option value="include">包含</option>
+            <option value="exclude">排除</option>
+          </select>
+          <input id="suffix-filter" type="text" placeholder=".json,.php" title="输入文件后缀，用逗号分隔" />
+        </div>
+        <select id="method">
+          <option value="">All methods</option>
+          <option>GET</option>
+          <option>POST</option>
+          <option>PUT</option>
+          <option>PATCH</option>
+          <option>DELETE</option>
+          <option>OPTIONS</option>
+          <option>HEAD</option>
+        </select>
+        <label>
+          <input id="captureBodies" type="checkbox" checked /> 📝 Bodies
+        </label>
+        <label>
+          <input id="enableAESDecrypt" type="checkbox" checked /> 🔐 AES Decrypt
+        </label>
+        <button id="applyAESDecrypt">✨ AES Apply</button>
+        <button id="export">📤 Export JSON</button>
+        <button id="batchDecrypt">🔓 批量解密</button>
+        <button id="batchExport">📦 批量导出</button>
+        <button id="showHelp" title="显示帮助">❓</button>
+      </div>
+      
+      <!-- 网络统计显示区域 -->
+      <div id="networkStats" class="network-stats"></div>
+      <div class="split">
+        <div class="left">
+          <table class="table" id="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Method</th>
+                <th>URL</th>
+                <th>Status</th>
+                <th>Type</th>
+                <th>Time (ms)</th>
+                <th>Size</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="right">
+          <div class="tabs">
+            <button data-tab="overview" class="active">Overview</button>
+            <button data-tab="request">Request</button>
+            <button data-tab="response">Response</button>
+            <button data-tab="headers">Headers</button>
+            <button data-tab="timing">Timing</button>
+          </div>
+          <div id="pane" style="overflow:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage 页签内容 -->
+    <div id="storage-content" class="main-content">
+      <div class="storage-toolbar">
+        <div class="storage-type-tabs">
+          <button data-storage-type="localStorage" class="storage-type-tab active">📁 localStorage</button>
+          <button data-storage-type="sessionStorage" class="storage-type-tab">🔒 sessionStorage</button>
+        </div>
+        <div class="storage-actions">
+          <button id="refreshStorage">🔄 刷新</button>
+          <button id="addStorageItem">➕ 添加</button>
+          <button id="clearStorage">🗑️ 清空</button>
+          <button id="importStorage">📥 导入</button>
+          <button id="exportStorage">📤 导出</button>
+        </div>
+      </div>
+      
+      <div class="storage-container">
+        <div class="storage-list" id="storageList">
+          <!-- 存储项列表 -->
+        </div>
+        
+        <div class="storage-editor">
+          <div class="form-group">
+            <label for="editKey">键名:</label>
+            <input type="text" id="editKey" placeholder="输入存储键名" />
+          </div>
+          
+          <div class="form-group">
+            <label for="editValue">值:</label>
+            <div class="value-editor-container">
+              <div class="value-search-bar">
+                <input type="text" id="valueSearch" placeholder="🔍 搜索值内容..." />
+                <div class="search-controls">
+                  <button id="prevMatch" disabled>⬆️ 上一个</button>
+                  <button id="nextMatch" disabled>⬇️ 下一个</button>
+                  <span id="matchCount">0/0</span>
+                </div>
+              </div>
+              <textarea id="editValue" placeholder="输入存储值"></textarea>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button id="saveStorage">💾 保存</button>
+            <button id="deleteStorage" style="display: none;">🗑️ 删除</button>
+            <button id="validateJSON">✅ 验证JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 上下文菜单 -->
+    <div id="contextMenu" class="context-menu">
+      <div class="context-menu-item" data-action="copy-url">📋 复制URL</div>
+      <div class="context-menu-item" data-action="copy-request">📋 复制请求</div>
+      <div class="context-menu-item" data-action="copy-response">📋 复制响应</div>
+      <div class="context-menu-item" data-action="export-single">📤 导出单个</div>
+    </div>
+
+    <!-- 帮助模态框 -->
+    <div id="helpModal" class="help-modal">
+      <div class="help-content">
+        <div class="help-header">
+          <h2>🌐 AES DevTools 使用帮助</h2>
+          <button class="help-close" id="closeHelp">×</button>
+        </div>
+        <div class="help-body">
+          <h3>🔍 网络监控</h3>
+          <ul>
+            <li><strong>实时捕获:</strong> 自动捕获所有网络请求和响应</li>
+            <li><strong>智能过滤:</strong> 支持URL、方法、状态码等多种过滤方式</li>
+            <li><strong>AES解密:</strong> 自动检测并解密AES加密的内容</li>
+            <li><strong>批量操作:</strong> 支持批量解密和导出</li>
+          </ul>
+          
+          <h3>💾 存储管理</h3>
+          <ul>
+            <li><strong>双存储支持:</strong> 同时管理localStorage和sessionStorage</li>
+            <li><strong>实时编辑:</strong> 直接在面板中编辑存储数据</li>
+            <li><strong>搜索功能:</strong> 快速定位存储项中的值</li>
+            <li><strong>导入导出:</strong> 支持JSON格式的数据导入导出</li>
+          </ul>
+          
+          <h3>⌨️ 键盘快捷键</h3>
+          <ul>
+            <li><code>Ctrl/Cmd + F</code> - 聚焦到过滤器</li>
+            <li><code>Ctrl/Cmd + K</code> - 暂停/继续捕获</li>
+            <li><code>Ctrl/Cmd + R</code> - 清除记录</li>
+            <li><code>Ctrl/Cmd + S</code> - 导出数据</li>
+            <li><code>Ctrl/Cmd + E</code> - 批量导出</li>
+            <li><code>Ctrl/Cmd + D</code> - 批量解密</li>
+            <li><code>Space</code> - 暂停/继续捕获</li>
+            <li><code>Escape</code> - 关闭模态框/上下文菜单</li>
+            <li><code>Delete</code> - 删除选中的记录</li>
+          </ul>
+          
+          <h3>🎨 主题切换</h3>
+          <p>点击右上角的主题按钮可以在浅色和深色主题之间切换，主题设置会自动保存。</p>
+          
+          <h3>🔐 AES解密说明</h3>
+          <p>工具会自动从页面的sessionStorage中检测AES密钥，并尝试解密请求和响应内容。支持手动指定密钥和批量解密操作。</p>
+          
+          <h3>📊 网络统计</h3>
+          <p>实时显示网络请求的统计信息，包括总数、成功、警告、错误和待处理请求数量。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 脚本引用 -->
+    <script src="js/aes.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/network.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="panel.js"></script>
+  </body>
+</html> 

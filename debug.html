@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>调试 AES DevTools 扩展</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .debug-button {
+            background: #42b883;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .debug-button:hover {
+            background: #369870;
+        }
+        .debug-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #e9ecef;
+            border-left: 4px solid #42b883;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐛 调试 AES DevTools 扩展</h1>
+    
+    <div class="debug-section">
+        <h2>🔍 扩展状态检查</h2>
+        <button class="debug-button" onclick="checkExtensionStatus()">检查扩展状态</button>
+        <button class="debug-button" onclick="checkConsoleLogs()">检查控制台日志</button>
+        <button class="debug-button" onclick="testNetworkCapture()">测试网络捕获</button>
+        <div id="extension-status"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>📊 调试输出</h2>
+        <button class="debug-button" onclick="clearDebugOutput()">清空输出</button>
+        <div id="debug-output" class="debug-output">等待调试信息...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>🌐 网络请求测试</h2>
+        <button class="debug-button" onclick="sendTestRequest()">发送测试请求</button>
+        <button class="debug-button" onclick="checkNetworkTab()">检查网络标签页</button>
+        <div id="network-debug"></div>
+    </div>
+
+    <script>
+        let debugOutput = '';
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugOutput += `[${timestamp}] ${message}\n`;
+            document.getElementById('debug-output').textContent = debugOutput;
+        }
+        
+        function checkExtensionStatus() {
+            const statusDiv = document.getElementById('extension-status');
+            statusDiv.innerHTML = '';
+            
+            log('开始检查扩展状态...');
+            
+            // 检查Chrome API
+            if (typeof chrome !== 'undefined') {
+                log('✅ Chrome API 可用');
+                showStatus('extension-status', '✅ Chrome API 可用', 'success');
+                
+                if (chrome.devtools) {
+                    log('✅ DevTools API 可用');
+                    showStatus('extension-status', '✅ DevTools API 可用', 'success');
+                    
+                    if (chrome.devtools.network) {
+                        log('✅ 网络API 可用');
+                        showStatus('extension-status', '✅ 网络API 可用', 'success');
+                    } else {
+                        log('⚠️ 网络API 不可用（正常，在普通页面中）');
+                        showStatus('extension-status', '⚠️ 网络API 不可用（正常，在普通页面中）', 'error');
+                    }
+                    
+                    if (chrome.devtools.inspectedWindow) {
+                        log('✅ 检查窗口API 可用');
+                        showStatus('extension-status', '✅ 检查窗口API 可用', 'success');
+                    } else {
+                        log('⚠️ 检查窗口API 不可用（正常，在普通页面中）');
+                        showStatus('extension-status', '⚠️ 检查窗口API 不可用（正常，在普通页面中）', 'error');
+                    }
+                } else {
+                    log('⚠️ DevTools API 不可用（正常，在普通页面中）');
+                    showStatus('extension-status', '⚠️ DevTools API 不可用（正常，在普通页面中）', 'error');
+                }
+            } else {
+                log('❌ Chrome API 不可用');
+                showStatus('extension-status', '❌ Chrome API 不可用', 'error');
+            }
+            
+            log('扩展状态检查完成');
+        }
+        
+        function checkConsoleLogs() {
+            log('检查控制台日志...');
+            log('请打开 DevTools 控制台查看扩展的日志信息');
+            log('如果看到错误信息，请记录下来');
+        }
+        
+        function testNetworkCapture() {
+            log('测试网络捕获功能...');
+            log('这个功能只在 DevTools 环境中可用');
+            log('请打开 DevTools 并切换到 AES DevTools 标签页');
+        }
+        
+        function sendTestRequest() {
+            const networkDiv = document.getElementById('network-debug');
+            networkDiv.innerHTML = '';
+            
+            log('发送测试网络请求...');
+            
+            fetch('https://httpbin.org/get?debug=true')
+                .then(response => response.json())
+                .then(data => {
+                    log('✅ 测试请求成功');
+                    log(`响应: ${JSON.stringify(data, null, 2)}`);
+                    showStatus('network-debug', '✅ 测试请求成功，请在 AES DevTools 中查看', 'success');
+                })
+                .catch(error => {
+                    log(`❌ 测试请求失败: ${error.message}`);
+                    showStatus('network-debug', `❌ 测试请求失败: ${error.message}`, 'error');
+                });
+        }
+        
+        function checkNetworkTab() {
+            log('检查网络标签页...');
+            log('请确保：');
+            log('1. 已安装 AES DevTools 扩展');
+            log('2. 在 DevTools 中找到 AES DevTools 标签页');
+            log('3. 扩展面板正确显示');
+        }
+        
+        function clearDebugOutput() {
+            debugOutput = '';
+            document.getElementById('debug-output').textContent = '输出已清空...';
+        }
+        
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            element.appendChild(statusDiv);
+        }
+        
+        // 页面加载完成后显示说明
+        window.addEventListener('load', () => {
+            log('调试页面已加载');
+            log('请按以下步骤操作：');
+            log('1. 确保已安装 AES DevTools 扩展');
+            log('2. 按 F12 打开 DevTools');
+            log('3. 找到 AES DevTools 标签页');
+            log('4. 点击进入扩展面板');
+            log('5. 回到此页面进行调试');
+        });
+        
+        // 定期记录状态
+        setInterval(() => {
+            log(`心跳检测 - ${new Date().toLocaleTimeString()}`);
+        }, 30000); // 每30秒
+    </script>
+</body>
+</html> 

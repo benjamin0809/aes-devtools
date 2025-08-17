@@ -1,0 +1,93 @@
+/* CSS变量定义 */
+:root {
+  /* Vue DevTools 浅色主题（默认）*/
+  --bg: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --panel: #ffffff;
+  --panel-hover: #f1f3f4;
+  --text: #2c3e50;
+  --text-secondary: #606060;
+  --muted: #8e8e93;
+  --accent: #42b883;
+  --accent-dark: #369870;
+  --accent-light: #4fc08d;
+  --border: #e1e4e8;
+  --border-light: #d1d5da;
+  --danger: #e74c3c;
+  --success: #42b883;
+  --warning: #f39c12;
+  --info: #3498db;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* 深色主题 */
+[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --bg-secondary: #252526;
+  --panel: #2d2d30;
+  --panel-hover: #37373a;
+  --text: #cccccc;
+  --text-secondary: #a9a9a9;
+  --muted: #969696;
+  --accent: #42b883;
+  --accent-dark: #369870;
+  --accent-light: #4fc08d;
+  --border: #3c3c3c;
+  --border-light: #464647;
+  --danger: #f48771;
+  --success: #42b883;
+  --warning: #e6cc77;
+  --info: #64b5f6;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* 主题切换动画 */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* 主题切换按钮样式 */
+.theme-toggle {
+  background: var(--bg-secondary);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-toggle:hover {
+  background: var(--panel-hover);
+}
+
+.theme-toggle .icon {
+  font-size: 14px;
+}
+
+/* 主题相关的特殊样式 */
+[data-theme="dark"] .search-highlight {
+  background: #8b5a2b;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .search-highlight.current {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+[data-theme="light"] .search-highlight {
+  background: var(--warning);
+  color: var(--text);
+}
+
+[data-theme="light"] .search-highlight.current {
+  background: var(--accent);
+  color: white;
+}

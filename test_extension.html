@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试 AES DevTools 扩展</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #42b883;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #369870;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #e9ecef;
+            border-left: 4px solid #42b883;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .info {
+            border-left-color: #17a2b8;
+            background: #d1ecf1;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 AES DevTools 扩展测试页面</h1>
+    
+    <div class="instructions">
+        <h3>📋 测试步骤</h3>
+        <ol>
+            <li>确保已安装 AES DevTools 扩展</li>
+            <li>按 F12 打开开发者工具</li>
+            <li>在开发者工具中找到 "AES DevTools" 标签页</li>
+            <li>点击进入 AES DevTools 面板</li>
+            <li>回到此页面，点击下面的测试按钮</li>
+            <li>在 AES DevTools 中查看网络请求和存储数据</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔍 扩展状态检查</h2>
+        <button class="test-button" onclick="checkExtensionStatus()">检查扩展状态</button>
+        <div id="extension-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🌐 网络请求测试</h2>
+        <p>点击下面的按钮发送网络请求，然后在 AES DevTools 中查看：</p>
+        <button class="test-button" onclick="testGetRequest()">发送 GET 请求</button>
+        <button class="test-button" onclick="testPostRequest()">发送 POST 请求</button>
+        <button class="test-button" onclick="testEncryptedRequest()">发送"加密"请求</button>
+        <div id="network-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>💾 存储测试</h2>
+        <p>测试 localStorage 和 sessionStorage 功能：</p>
+        <button class="test-button" onclick="testLocalStorage()">测试 localStorage</button>
+        <button class="test-button" onclick="testSessionStorage()">测试 sessionStorage</button>
+        <button class="test-button" onclick="clearStorage()">清空存储</button>
+        <div id="storage-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔐 AES 功能测试</h2>
+        <p>测试 AES 相关功能：</p>
+        <button class="test-button" onclick="testAESFunctions()">测试 AES 功能</button>
+        <div id="aes-results"></div>
+    </div>
+
+    <script>
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            element.appendChild(statusDiv);
+            
+            // 限制显示的数量
+            if (element.children.length > 5) {
+                element.removeChild(element.firstChild);
+            }
+        }
+        
+        function checkExtensionStatus() {
+            const statusDiv = document.getElementById('extension-status');
+            statusDiv.innerHTML = '';
+            
+            showStatus('extension-status', '🔍 检查扩展状态中...', 'info');
+            
+            // 检查Chrome API
+            if (typeof chrome !== 'undefined') {
+                showStatus('extension-status', '✅ Chrome API 可用', 'success');
+                
+                if (chrome.devtools) {
+                    showStatus('extension-status', '✅ DevTools API 可用', 'success');
+                    
+                    if (chrome.devtools.network) {
+                        showStatus('extension-status', '✅ 网络API 可用', 'success');
+                    } else {
+                        showStatus('extension-status', '⚠️ 网络API 不可用（正常，在普通页面中）', 'info');
+                    }
+                    
+                    if (chrome.devtools.inspectedWindow) {
+                        showStatus('extension-status', '✅ 检查窗口API 可用', 'success');
+                    } else {
+                        showStatus('extension-status', '⚠️ 检查窗口API 不可用（正常，在普通页面中）', 'info');
+                    }
+                } else {
+                    showStatus('extension-status', '⚠️ DevTools API 不可用（正常，在普通页面中）', 'info');
+                }
+            } else {
+                showStatus('extension-status', '❌ Chrome API 不可用', 'error');
+            }
+            
+            // 检查扩展模块（这些在普通页面中不会加载）
+            showStatus('extension-status', 'ℹ️ 扩展模块只在 DevTools 中加载', 'info');
+            
+            showStatus('extension-status', '💡 请打开 DevTools 并切换到 AES DevTools 标签页', 'info');
+        }
+        
+        function testGetRequest() {
+            const resultsDiv = document.getElementById('network-results');
+            resultsDiv.innerHTML = '';
+            
+            showStatus('network-results', '📡 发送 GET 请求中...', 'info');
+            
+            fetch('https://httpbin.org/get?test=devtools')
+                .then(response => response.json())
+                .then(data => {
+                    showStatus('network-results', '✅ GET 请求成功', 'success');
+                    showStatus('network-results', `📊 响应: ${data.url}`, 'info');
+                    showStatus('network-results', '💡 请在 AES DevTools 的网络监控中查看此请求', 'info');
+                })
+                .catch(error => {
+                    showStatus('network-results', `❌ GET 请求失败: ${error.message}`, 'error');
+                });
+        }
+        
+        function testPostRequest() {
+            const resultsDiv = document.getElementById('network-results');
+            resultsDiv.innerHTML = '';
+            
+            showStatus('network-results', '📡 发送 POST 请求中...', 'info');
+            
+            fetch('https://httpbin.org/post', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: '这是来自测试页面的POST请求',
+                    timestamp: new Date().toISOString(),
+                    test: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showStatus('network-results', '✅ POST 请求成功', 'success');
+                showStatus('network-results', `📊 响应状态: ${data.url}`, 'info');
+                showStatus('network-results', '💡 请在 AES DevTools 的网络监控中查看此请求', 'info');
+            })
+            .catch(error => {
+                showStatus('network-results', `❌ POST 请求失败: ${error.message}`, 'error');
+            });
+        }
+        
+        function testEncryptedRequest() {
+            const resultsDiv = document.getElementById('network-results');
+            resultsDiv.innerHTML = '';
+            
+            showStatus('network-results', '📡 发送"加密"请求中...', 'info');
+            
+            // 模拟加密数据
+            const encryptedData = btoa(JSON.stringify({
+                message: '这是模拟的加密数据',
+                encrypted: true,
+                timestamp: new Date().toISOString()
+            }));
+            
+            fetch('https://httpbin.org/post', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Encrypted': 'true',
+                    'X-Encryption-Type': 'AES'
+                },
+                body: JSON.stringify({
+                    encrypted: encryptedData,
+                    encryptionType: 'AES',
+                    test: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showStatus('network-results', '✅ "加密"请求成功', 'success');
+                showStatus('network-results', `📊 响应状态: ${data.url}`, 'info');
+                showStatus('network-results', '💡 请在 AES DevTools 中查看是否自动检测到加密数据', 'info');
+            })
+            .catch(error => {
+                showStatus('network-results', `❌ "加密"请求失败: ${error.message}`, 'error');
+            });
+        }
+        
+        function testLocalStorage() {
+            const resultsDiv = document.getElementById('storage-results');
+            resultsDiv.innerHTML = '';
+            
+            try {
+                // 添加测试数据
+                localStorage.setItem('devtools-test-key', 'devtools-test-value');
+                localStorage.setItem('devtools-test-object', JSON.stringify({
+                    name: 'DevTools测试对象',
+                    type: 'localStorage',
+                    timestamp: new Date().toISOString(),
+                    test: true
+                }));
+                
+                showStatus('storage-results', '✅ localStorage 测试数据已添加', 'success');
+                showStatus('storage-results', '💡 请在 AES DevTools 的存储管理中查看', 'info');
+                
+            } catch (error) {
+                showStatus('storage-results', `❌ localStorage 测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testSessionStorage() {
+            const resultsDiv = document.getElementById('storage-results');
+            resultsDiv.innerHTML = '';
+            
+            try {
+                // 添加测试数据
+                sessionStorage.setItem('devtools-session-key', 'devtools-session-value');
+                sessionStorage.setItem('devtools-session-object', JSON.stringify({
+                    name: 'DevTools会话对象',
+                    type: 'sessionStorage',
+                    timestamp: new Date().toISOString(),
+                    test: true
+                }));
+                
+                showStatus('storage-results', '✅ sessionStorage 测试数据已添加', 'success');
+                showStatus('storage-results', '💡 请在 AES DevTools 的存储管理中查看', 'info');
+                
+            } catch (error) {
+                showStatus('storage-results', `❌ sessionStorage 测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function clearStorage() {
+            const resultsDiv = document.getElementById('storage-results');
+            resultsDiv.innerHTML = '';
+            
+            try {
+                // 清理测试数据
+                localStorage.removeItem('devtools-test-key');
+                localStorage.removeItem('devtools-test-object');
+                sessionStorage.removeItem('devtools-session-key');
+                sessionStorage.removeItem('devtools-session-object');
+                
+                showStatus('storage-results', '✅ 测试数据已清理', 'success');
+                
+            } catch (error) {
+                showStatus('storage-results', `❌ 清理测试数据失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testAESFunctions() {
+            const resultsDiv = document.getElementById('aes-results');
+            resultsDiv.innerHTML = '';
+            
+            showStatus('aes-results', '🔐 测试 AES 功能中...', 'info');
+            
+            // 模拟 AES 加密/解密测试
+            try {
+                const testData = {
+                    message: '这是测试AES功能的数据',
+                    timestamp: new Date().toISOString(),
+                    test: true
+                };
+                
+                // 使用 Base64 模拟加密
+                const encrypted = btoa(JSON.stringify(testData));
+                const decrypted = JSON.parse(atob(encrypted));
+                
+                showStatus('aes-results', '✅ AES 模拟测试成功', 'success');
+                showStatus('aes-results', `🔒 模拟加密: ${encrypted.substring(0, 50)}...`, 'info');
+                showStatus('aes-results', `🔓 模拟解密: ${decrypted.message}`, 'info');
+                showStatus('aes-results', '💡 真正的AES解密功能在扩展中实现', 'info');
+                
+            } catch (error) {
+                showStatus('aes-results', `❌ AES 测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 页面加载完成后显示说明
+        window.addEventListener('load', () => {
+            showStatus('extension-status', '🔍 请点击"检查扩展状态"按钮开始测试', 'info');
+            showStatus('network-results', '🔍 请点击网络请求测试按钮开始测试', 'info');
+            showStatus('storage-results', '🔍 请点击存储测试按钮开始测试', 'info');
+            showStatus('aes-results', '🔍 请点击AES功能测试按钮开始测试', 'info');
+        });
+        
+        // 定期发送心跳请求，帮助测试网络监控
+        setInterval(() => {
+            if (Math.random() < 0.3) { // 30% 概率发送请求
+                fetch('https://httpbin.org/delay/1', { method: 'GET' })
+                    .catch(() => {}); // 忽略错误
+            }
+        }, 10000); // 每10秒
+    </script>
+</body>
+</html> 
